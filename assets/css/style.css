@@ -1,0 +1,659 @@
+/* ===================================
+   ICT Ticketportaal - Custom Styles
+   =================================== */
+
+/* ===================================
+   1. CSS Variables & Color Scheme
+   =================================== */
+:root {
+    /* Primary Colors */
+    --primary-blue: #0066cc;
+    --primary-blue-dark: #0052a3;
+    --primary-blue-light: #3385d6;
+    
+    /* Status Colors */
+    --success-green: #28a745;
+    --warning-yellow: #ffc107;
+    --danger-red: #dc3545;
+    --info-blue: #17a2b8;
+    
+    /* Priority Colors */
+    --priority-low: #6c757d;
+    --priority-medium: #ffc107;
+    --priority-high: #fd7e14;
+    --priority-urgent: #dc3545;
+    
+    /* Neutral Colors */
+    --gray-100: #f8f9fa;
+    --gray-200: #e9ecef;
+    --gray-300: #dee2e6;
+    --gray-600: #6c757d;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+    
+    /* Spacing */
+    --sidebar-width: 250px;
+    --header-height: 56px;
+}
+
+/* ===================================
+   2. Global Styles
+   =================================== */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--gray-100);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container-fluid {
+    flex: 1;
+}
+
+/* ===================================
+   3. Navigation & Header
+   =================================== */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1030;
+}
+
+.navbar-brand {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255,255,255,0.9);
+    transition: color 0.2s ease;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link.active {
+    color: #ffffff;
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 0.25rem;
+}
+
+/* ===================================
+   4. Sidebar Navigation
+   =================================== */
+.sidebar {
+    position: sticky;
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    padding: 0;
+}
+
+.sidebar .nav-link {
+    color: var(--gray-800);
+    padding: 0.75rem 1rem;
+    margin: 0.125rem 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--gray-200);
+    color: var(--primary-blue);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.sidebar .nav-link i {
+    width: 20px;
+    text-align: center;
+}
+
+.sidebar-heading {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+/* ===================================
+   5. Main Content Area
+   =================================== */
+main {
+    padding: 2rem;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--gray-300);
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.page-header .breadcrumb {
+    background: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* ===================================
+   6. Cards & Panels
+   =================================== */
+.card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 2px solid var(--gray-200);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.stat-card .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ===================================
+   7. Status Badges
+   =================================== */
+.badge {
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Ticket Status Badges */
+.badge-status-open {
+    background-color: var(--info-blue);
+    color: white;
+}
+
+.badge-status-in_progress {
+    background-color: var(--warning-yellow);
+    color: var(--gray-900);
+}
+
+.badge-status-pending {
+    background-color: #6f42c1;
+    color: white;
+}
+
+.badge-status-resolved {
+    background-color: var(--success-green);
+    color: white;
+}
+
+.badge-status-closed {
+    background-color: var(--gray-600);
+    color: white;
+}
+
+/* Priority Badges */
+.badge-priority-low {
+    background-color: var(--priority-low);
+    color: white;
+}
+
+.badge-priority-medium {
+    background-color: var(--priority-medium);
+    color: var(--gray-900);
+}
+
+.badge-priority-high {
+    background-color: var(--priority-high);
+    color: white;
+}
+
+.badge-priority-urgent {
+    background-color: var(--priority-urgent);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ===================================
+   8. Forms & Validation
+   =================================== */
+.form-label {
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+}
+
+/* Validation States */
+.form-control.is-valid,
+.form-select.is-valid {
+    border-color: var(--success-green);
+}
+
+.form-control.is-valid:focus,
+.form-select.is-valid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--danger-red);
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.invalid-feedback,
+.valid-feedback {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Required Field Indicator */
+.required::after {
+    content: " *";
+    color: var(--danger-red);
+}
+
+/* ===================================
+   9. Buttons
+   =================================== */
+.btn {
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-blue-dark);
+    border-color: var(--primary-blue-dark);
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.125rem;
+}
+
+/* ===================================
+   10. Tables & Lists
+   =================================== */
+.table {
+    background-color: white;
+}
+
+.table thead th {
+    background-color: var(--gray-100);
+    border-bottom: 2px solid var(--gray-300);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: var(--gray-700);
+    padding: 1rem 0.75rem;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: var(--gray-100);
+}
+
+.table-responsive {
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Ticket List Specific */
+.ticket-row {
+    cursor: pointer;
+}
+
+.ticket-row.overdue {
+    background-color: #fff5f5;
+    border-left: 4px solid var(--danger-red);
+}
+
+.ticket-number {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+
+/* ===================================
+   11. Alerts & Notifications
+   =================================== */
+.alert {
+    border: none;
+    border-left: 4px solid;
+    border-radius: 0.375rem;
+    padding: 1rem 1.25rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: var(--success-green);
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: var(--danger-red);
+    color: #721c24;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: var(--warning-yellow);
+    color: #856404;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: var(--info-blue);
+    color: #0c5460;
+}
+
+/* ===================================
+   12. File Upload
+   =================================== */
+.file-upload-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+}
+
+.file-upload-input {
+    position: absolute;
+    left: -9999px;
+}
+
+.file-upload-label {
+    display: inline-block;
+    padding: 0.625rem 1.25rem;
+    background-color: var(--gray-200);
+    border: 2px dashed var(--gray-400);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-upload-label:hover {
+    background-color: var(--gray-300);
+    border-color: var(--primary-blue);
+}
+
+.file-preview {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: var(--gray-100);
+    border-radius: 0.375rem;
+}
+
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: white;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.file-preview-item:last-child {
+    margin-bottom: 0;
+}
+
+/* ===================================
+   13. Comments & Timeline
+   =================================== */
+.comment-thread {
+    margin-top: 2rem;
+}
+
+.comment {
+    padding: 1rem;
+    background-color: white;
+    border-left: 3px solid var(--gray-300);
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+}
+
+.comment.internal {
+    background-color: #fff9e6;
+    border-left-color: var(--warning-yellow);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.comment-date {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.comment-body {
+    color: var(--gray-800);
+    line-height: 1.6;
+}
+
+/* ===================================
+   14. Loading & Spinners
+   =================================== */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-border-lg {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* ===================================
+   15. Footer
+   =================================== */
+.footer {
+    background-color: var(--gray-100);
+    margin-top: auto;
+}
+
+/* ===================================
+   16. Responsive Breakpoints
+   =================================== */
+
+/* Mobile (< 768px) */
+@media (max-width: 767.98px) {
+    main {
+        padding: 1rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 2rem;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .sidebar {
+        position: relative;
+        height: auto;
+        top: 0;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-group .btn {
+        width: auto;
+    }
+}
+
+/* Tablet (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    main {
+        padding: 1.5rem;
+    }
+    
+    .sidebar {
+        width: 200px;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 2.25rem;
+    }
+}
+
+/* Desktop (> 1024px) */
+@media (min-width: 1025px) {
+    .container-fluid {
+        max-width: 1400px;
+    }
+}
+
+/* ===================================
+   17. Utility Classes
+   =================================== */
+.text-muted-light {
+    color: var(--gray-600) !important;
+}
+
+.bg-light-blue {
+    background-color: #e7f3ff !important;
+}
+
+.border-left-primary {
+    border-left: 4px solid var(--primary-blue) !important;
+}
+
+.border-left-success {
+    border-left: 4px solid var(--success-green) !important;
+}
+
+.border-left-warning {
+    border-left: 4px solid var(--warning-yellow) !important;
+}
+
+.border-left-danger {
+    border-left: 4px solid var(--danger-red) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    transition: box-shadow 0.2s ease;
+}
+
+/* ===================================
+   18. Print Styles
+   =================================== */
+@media print {
+    .navbar,
+    .sidebar,
+    .footer,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+    
+    main {
+        padding: 0;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid var(--gray-300);
+    }
+}

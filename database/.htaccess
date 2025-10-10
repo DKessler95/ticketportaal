@@ -1,0 +1,3 @@
+# Deny all access to database directory
+Require all denied
+
