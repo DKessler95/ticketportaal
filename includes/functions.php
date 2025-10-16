@@ -605,3 +605,80 @@ function getDashboardUrl($role) {
             return SITE_URL . '/user/dashboard.php';
     }
 }
+
+/**
+ * Get current logged-in user information
+ * 
+ * @return array|null User data array or null if not logged in
+ */
+function getCurrentUser() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    if (!isset($_SESSION['user_id'])) {
+        return null;
+    }
+    
+    return [
+        'user_id' => $_SESSION['user_id'],
+        'email' => $_SESSION['email'] ?? '',
+        'full_name' => $_SESSION['full_name'] ?? '',
+        'role' => $_SESSION['role'] ?? 'user'
+    ];
+}
+
+/**
+ * Get current user ID
+ * 
+ * @return int|null User ID or null if not logged in
+ */
+function getCurrentUserId() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    return $_SESSION['user_id'] ?? null;
+}
+
+/**
+ * Get current user role
+ * 
+ * @return string|null User role or null if not logged in
+ */
+function getCurrentUserRole() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    return $_SESSION['role'] ?? null;
+}
+
+/**
+ * Get base URL of the application
+ * 
+ * @return string Base URL
+ */
+function getBaseUrl() {
+    return SITE_URL;
+}
+
+/**
+ * Check if current page is active for navigation highlighting
+ * 
+ * @param string $page Page filename to check
+ * @param string|null $folder Optional folder name (user, agent, admin)
+ * @return string 'active' if current page matches, empty string otherwise
+ */
+function isActive($page, $folder = null) {
+    $currentPage = basename($_SERVER['PHP_SELF']);
+    $currentFolder = basename(dirname($_SERVER['PHP_SELF']));
+    
+    // Check if page matches
+    $pageMatches = ($currentPage === $page);
+    
+    // Check if folder matches (if specified)
+    $folderMatches = ($folder === null || $currentFolder === $folder);
+    
+    return ($pageMatches && $folderMatches) ? 'active' : '';
+}

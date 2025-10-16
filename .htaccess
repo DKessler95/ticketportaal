@@ -1,0 +1,178 @@
+# ICT Ticketportaal - Apache Security Configuration
+# This file provides security hardening for Apache web servers
+
+# ============================================
+# GENERAL SECURITY SETTINGS
+# ============================================
+
+# Disable directory browsing
+Options -Indexes
+
+# Disable server signature
+ServerSignature Off
+
+# Follow symbolic links (required for some frameworks)
+Options +FollowSymLinks
+
+# Disable MultiViews to prevent content negotiation issues
+Options -MultiViews
+
+# ============================================
+# HTTPS REDIRECT (DISABLED FOR DEVELOPMENT)
+# ============================================
+
+# Redirect all HTTP traffic to HTTPS
+# COMMENTED OUT FOR LOCALHOST DEVELOPMENT
+# Uncomment these lines when deploying to production with SSL
+
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
+
+# ============================================
+# SECURITY HEADERS
+# ============================================
+
+<IfModule mod_headers.c>
+    # Prevent clickjacking attacks
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Enable XSS protection in browsers
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Prevent MIME type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Referrer policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Content Security Policy (adjust as needed for your application)
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; frame-ancestors 'self';"
+
+    # Remove server information
+    Header unset Server
+    Header unset X-Powered-By
+</IfModule>
+
+# ============================================
+# FILE ACCESS PROTECTION
+# ============================================
+
+# Protect hidden files (starting with .)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Protect configuration and sensitive files
+<FilesMatch "\.(ini|log|conf|sql|md)$">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# DIRECTORY ACCESS PROTECTION
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Deny access to config directory
+    RewriteRule ^config/ - [F,L]
+
+    # Deny access to classes directory
+    RewriteRule ^classes/ - [F,L]
+
+    # Deny access to includes directory
+    RewriteRule ^includes/ - [F,L]
+
+    # Deny access to logs directory
+    RewriteRule ^logs/ - [F,L]
+
+    # Deny access to database directory
+    RewriteRule ^database/ - [F,L]
+    
+    # Block PHP execution in uploads directory
+    RewriteRule ^uploads/.*\.php$ - [F,L]
+    RewriteRule ^uploads/.*\.phtml$ - [F,L]
+</IfModule>
+
+# ============================================
+# PHP SECURITY SETTINGS
+# ============================================
+
+<IfModule mod_php.c>
+    # Disable dangerous PHP functions
+    php_flag display_errors Off
+    php_flag log_errors On
+
+    # Set maximum execution time
+    php_value max_execution_time 30
+
+    # Set maximum input time
+    php_value max_input_time 60
+
+    # Set memory limit
+    php_value memory_limit 128M
+    
+    # Set maximum post size
+    php_value post_max_size 12M
+
+    # Set maximum upload file size
+    php_value upload_max_filesize 10M
+</IfModule>
+
+# ============================================
+# COMPRESSION
+# ============================================
+
+# Enable GZIP compression for better performance
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# ============================================
+# CACHING
+# ============================================
+
+# Set cache control for static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Images
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+
+    # Fonts
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+
+    # HTML and other dynamic content
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# ============================================
+# ADDITIONAL SECURITY
+# ============================================
+
+# Disable ETags (can leak inode information)
+<IfModule mod_headers.c>
+    Header unset ETag
+</IfModule>
+FileETag None
+
+# Limit request methods to only what's needed
+<LimitExcept GET POST HEAD>
+    Require all denied
+</LimitExcept>
+
+# Protect against DOS attacks by limiting request size
+LimitRequestBody 10485760

@@ -17,9 +17,9 @@ if (!defined('SESSION_TIMEOUT')) {
 // Session cookie parameters
 ini_set('session.cookie_httponly', '1');        // Prevent JavaScript access to session cookie (XSS protection)
 ini_set('session.use_only_cookies', '1');       // Only use cookies for session ID (no URL parameters)
-ini_set('session.cookie_secure', '1');          // Only send cookie over HTTPS (set to 0 for development without SSL)
+ini_set('session.cookie_secure', '0');          // Only send cookie over HTTPS (set to 0 for development without SSL)
 ini_set('session.use_strict_mode', '1');        // Reject uninitialized session IDs
-ini_set('session.cookie_samesite', 'Strict');   // Prevent CSRF attacks
+ini_set('session.cookie_samesite', 'Lax');      // Prevent CSRF attacks (Lax for development, Strict for production)
 
 // Session lifetime and garbage collection
 ini_set('session.gc_maxlifetime', SESSION_TIMEOUT);  // Session lifetime in seconds

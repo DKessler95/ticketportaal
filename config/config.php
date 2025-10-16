@@ -8,9 +8,10 @@
  */
 
 // Site URL (no trailing slash)
-define('SITE_URL', 'http://localhost/ticketportaal');
-define('DEBUG_MODE', true); // Voor lokaal testen
-
+// For localhost development with port 8080, use http://localhost:8080/ticketportaal
+// For localhost default port 80, use http://localhost/ticketportaal
+// For production, use https://tickets.kruit-en-kramer.nl
+define('SITE_URL', 'http://localhost:8080/ticketportaal');
 
 // Site name
 define('SITE_NAME', 'ICT Ticketportaal');
@@ -35,7 +36,9 @@ define('TIMEZONE', 'Europe/Amsterdam');
 date_default_timezone_set(TIMEZONE);
 
 // Error reporting (set to 0 in production)
-define('DEBUG_MODE', true);
+if (!defined('DEBUG_MODE')) {
+    define('DEBUG_MODE', true);
+}
 if (DEBUG_MODE) {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);

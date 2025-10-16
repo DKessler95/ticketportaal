@@ -8,14 +8,7 @@ $userRole = $_SESSION['role'] ?? null;
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentDir = basename(dirname($_SERVER['PHP_SELF']));
 
-// Helper function to check if menu item is active
-function isActive($page, $dir = null) {
-    global $currentPage, $currentDir;
-    if ($dir !== null) {
-        return ($currentPage === $page && $currentDir === $dir) ? 'active' : '';
-    }
-    return ($currentPage === $page) ? 'active' : '';
-}
+// Note: isActive() function is now defined in includes/functions.php
 ?>
 
 <!-- Sidebar Navigation -->

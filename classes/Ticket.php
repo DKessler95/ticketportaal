@@ -227,6 +227,11 @@ class Ticket {
                 $params[] = $filters['date_to'] . ' 23:59:59';
             }
             
+            if (!empty($filters['source'])) {
+                $sql .= " AND t.source = ?";
+                $params[] = $filters['source'];
+            }
+            
             $sql .= " ORDER BY t.created_at DESC";
             
             $tickets = $this->db->fetchAll($sql, $params);
@@ -235,6 +240,72 @@ class Ticket {
             logError('Ticket', 'Failed to fetch all tickets', ['error' => $e->getMessage()]);
             $this->error = 'Failed to retrieve tickets';
             return [];
+        }
+    }
+
+    /**
+     * Get ticket count with optional filtering
+     * Filters: status (array or string), priority, category_id, assigned_agent_id, date_from, date_to
+     * 
+     * @param array $filters Optional filters
+     * @return int Ticket count
+     */
+    public function getTicketCount($filters = []) {
+        try {
+            $sql = "SELECT COUNT(*) as count
+                    FROM tickets t
+                    WHERE 1=1";
+            
+            $params = [];
+            
+            // Apply filters
+            if (!empty($filters['status'])) {
+                if (is_array($filters['status'])) {
+                    $placeholders = str_repeat('?,', count($filters['status']) - 1) . '?';
+                    $sql .= " AND t.status IN ($placeholders)";
+                    $params = array_merge($params, $filters['status']);
+                } else {
+                    $sql .= " AND t.status = ?";
+                    $params[] = $filters['status'];
+                }
+            }
+            
+            if (!empty($filters['priority'])) {
+                $sql .= " AND t.priority = ?";
+                $params[] = $filters['priority'];
+            }
+            
+            if (!empty($filters['category_id'])) {
+                $sql .= " AND t.category_id = ?";
+                $params[] = $filters['category_id'];
+            }
+            
+            if (!empty($filters['assigned_agent_id'])) {
+                $sql .= " AND t.assigned_agent_id = ?";
+                $params[] = $filters['assigned_agent_id'];
+            }
+            
+            if (!empty($filters['user_id'])) {
+                $sql .= " AND t.user_id = ?";
+                $params[] = $filters['user_id'];
+            }
+            
+            if (!empty($filters['date_from'])) {
+                $sql .= " AND t.created_at >= ?";
+                $params[] = $filters['date_from'];
+            }
+            
+            if (!empty($filters['date_to'])) {
+                $sql .= " AND t.created_at <= ?";
+                $params[] = $filters['date_to'] . ' 23:59:59';
+            }
+            
+            $result = $this->db->fetchOne($sql, $params);
+            return $result ? (int)$result['count'] : 0;
+        } catch (Exception $e) {
+            logError('Ticket', 'Failed to count tickets', ['error' => $e->getMessage()]);
+            $this->error = 'Failed to count tickets';
+            return 0;
         }
     }
 
@@ -646,6 +717,56 @@ class Ticket {
                 'ticket_id' => $ticketId,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+    
+    /**
+     * Update ticket status (simplified version for admin panel)
+     * 
+     * @param int $ticketId Ticket ID
+     * @param string $status New status
+     * @return bool True on success, false on failure
+     */
+    public function updateTicketStatus($ticketId, $status) {
+        return $this->updateStatus($ticketId, $status);
+    }
+    
+    /**
+     * Update ticket priority
+     * 
+     * @param int $ticketId Ticket ID
+     * @param string $priority New priority (low, medium, high, urgent)
+     * @return bool True on success, false on failure
+     */
+    public function updateTicketPriority($ticketId, $priority) {
+        try {
+            // Validate priority
+            $validPriorities = ['low', 'medium', 'high', 'urgent'];
+            if (!in_array($priority, $validPriorities)) {
+                $this->error = 'Invalid priority';
+                return false;
+            }
+            
+            $sql = "UPDATE tickets SET priority = ?, updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?";
+            $result = $this->db->execute($sql, [$priority, $ticketId]);
+            
+            if ($result) {
+                logError('Ticket', 'Ticket priority updated', [
+                    'ticket_id' => $ticketId,
+                    'priority' => $priority
+                ]);
+                return true;
+            }
+            
+            $this->error = 'Failed to update ticket priority';
+            return false;
+        } catch (Exception $e) {
+            logError('Ticket', 'Failed to update ticket priority', [
+                'ticket_id' => $ticketId,
+                'error' => $e->getMessage()
+            ]);
+            $this->error = 'An error occurred while updating the ticket priority';
+            return false;
         }
     }
 }
