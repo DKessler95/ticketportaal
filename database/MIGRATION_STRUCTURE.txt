@@ -1,0 +1,236 @@
+CI & Change Management - Database Structure
+===========================================
+
+TABLES (10)
+-----------
+
+1. configuration_items
+   ├── ci_id (PK)
+   ├── ci_number (UNIQUE, AUTO-GENERATED: CI-2025-001)
+   ├── type (Hardware, Software, Licentie, Overig)
+   ├── status (In gebruik, In voorraad, Defect, Afgeschreven, Onderhoud)
+   ├── owner_id (FK → users)
+   ├── created_by (FK → users)
+   └── [25 more fields for asset tracking]
+
+2. ci_history
+   ├── history_id (PK)
+   ├── ci_id (FK → configuration_items)
+   ├── user_id (FK → users)
+   ├── action, field_changed, old_value, new_value
+   └── created_at (IMMUTABLE AUDIT TRAIL)
+
+3. ci_attachments
+   ├── attachment_id (PK)
+   ├── ci_id (FK → configuration_items)
+   ├── filename, filepath, filesize, file_type
+   └── uploaded_by (FK → users)
+
+4. changes
+   ├── change_id (PK)
+   ├── change_number (UNIQUE, AUTO-GENERATED: CHG-2025-001)
+   ├── type (Feature, Patch, Hardware, Software, etc.)
+   ├── status (Nieuw → In beoordeling → Goedgekeurd → Ingepland → In uitvoering → Geïmplementeerd)
+   ├── requested_by, assigned_to, approved_by (FK → users)
+   └── [30 more fields for change management]
+
+5. change_history
+   ├── history_id (PK)
+   ├── change_id (FK → changes)
+   ├── user_id (FK → users)
+   ├── action, old_status, new_status, comment
+   └── created_at (IMMUTABLE AUDIT TRAIL)
+
+6. change_attachments
+   ├── attachment_id (PK)
+   ├── change_id (FK → changes)
+   ├── filename, filepath, filesize, file_type
+   └── uploaded_by (FK → users)
+
+7. ticket_ci_relations
+   ├── relation_id (PK)
+   ├── ticket_id (FK → tickets)
+   ├── ci_id (FK → configuration_items)
+   ├── relation_type (affects, caused_by, resolved_by, related_to)
+   └── created_by (FK → users)
+
+8. ticket_change_relations
+   ├── relation_id (PK)
+   ├── ticket_id (FK → tickets)
+   ├── change_id (FK → changes)
+   ├── relation_type (caused_by, resolved_by, related_to)
+   └── created_by (FK → users)
+
+9. change_ci_relations
+   ├── relation_id (PK)
+   ├── change_id (FK → changes)
+   ├── ci_id (FK → configuration_items)
+   ├── relation_type (affects, modifies, replaces, uses, related_to)
+   └── created_by (FK → users)
+
+10. sequences
+    ├── sequence_name (PK: 'ci_sequence', 'change_sequence')
+    ├── current_year
+    ├── current_number
+    └── last_updated
+
+
+TRIGGERS (2)
+------------
+
+1. before_ci_insert
+   → Auto-generates ci_number in format: CI-YYYY-NNN
+   → Resets counter each year
+   → Thread-safe with table locking
+
+2. before_change_insert
+   → Auto-generates change_number in format: CHG-YYYY-NNN
+   → Resets counter each year
+   → Thread-safe with table locking
+
+
+VIEWS (5)
+---------
+
+1. v_active_cis
+   → Active CIs with owner information
+   → Excludes archived items
+   → Joins with users table
+
+2. v_changes_overview
+   → Changes with requester and assignee names
+   → All change details in one view
+   → Optimized for listing pages
+
+3. v_ci_financial_summary
+   → Financial summary by type and status
+   → Total value, average value, count
+   → Purchase date ranges
+
+4. v_expiring_warranties
+   → CIs with warranties expiring within 90 days
+   → Days until expiry calculation
+   → Owner information included
+
+5. v_change_statistics
+   → Change metrics by status, type, priority
+   → Average implementation time
+   → Success rate calculations
+
+
+RELATIONSHIPS
+-------------
+
+Ticket ←→ CI (Many-to-Many)
+   via ticket_ci_relations
+   Types: affects, caused_by, resolved_by, related_to
+
+Ticket ←→ Change (Many-to-Many)
+   via ticket_change_relations
+   Types: caused_by, resolved_by, related_to
+
+Change ←→ CI (Many-to-Many)
+   via change_ci_relations
+   Types: affects, modifies, replaces, uses, related_to
+
+
+INDEXES (19 total)
+------------------
+
+configuration_items: 10 indexes
+   - ci_number (UNIQUE)
+   - serial_number (UNIQUE)
+   - status, type, category
+   - owner_id, department
+   - warranty_expiry, created_at
+   - status+type (composite)
+
+changes: 9 indexes
+   - change_number (UNIQUE)
+   - status, type, priority, impact
+   - requested_by, assigned_to
+   - planned_start_date, created_at
+   - status+priority (composite)
+
+
+AUTO-NUMBERING EXAMPLES
+-----------------------
+
+CI Numbers:
+   CI-2025-001
+   CI-2025-002
+   CI-2025-003
+   ...
+   CI-2026-001 (resets each year)
+
+Change Numbers:
+   CHG-2025-001
+   CHG-2025-002
+   CHG-2025-003
+   ...
+   CHG-2026-001 (resets each year)
+
+
+SAMPLE DATA (Optional)
+----------------------
+
+Configuration Items (5):
+   1. Dell Latitude 5520 Laptop
+   2. HP EliteDesk 800 Desktop
+   3. Microsoft Office 365 Business
+   4. Dell P2422H Monitor
+   5. JetBrains IntelliJ IDEA License
+
+Changes (3):
+   1. Upgrade Office 365 to E3 Plan (Nieuw)
+   2. Replace aging network switch (In beoordeling)
+   3. Implement backup solution (Goedgekeurd)
+
+
+FILE STORAGE
+------------
+
+uploads/ci_attachments/
+   └── .htaccess (access control)
+
+uploads/change_attachments/
+   └── .htaccess (access control)
+
+
+MIGRATION FILES
+---------------
+
+database/ci_change_migration.sql
+   → Main migration script
+   → ~500 lines of SQL
+   → Creates all objects
+
+run_ci_change_migration.php
+   → Web-based migration runner
+   → Password protected
+   → Sample data insertion
+   → Verification checks
+
+verify_ci_migration.php
+   → Pre-migration verification
+   → System readiness checks
+   → User-friendly interface
+
+
+DOCUMENTATION
+-------------
+
+database/CI_CHANGE_MIGRATION_README.md
+   → Complete migration guide
+   → Troubleshooting
+   → Rollback instructions
+
+database/MIGRATION_QUICK_START.md
+   → Quick start guide
+   → 3-step process
+   → Common issues
+
+TASK_1_COMPLETION_SUMMARY.md
+   → Task completion details
+   → Files created
+   → Requirements coverage
