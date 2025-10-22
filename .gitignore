@@ -34,6 +34,29 @@ desktop.ini
 # Vendor dependencies (if using Composer)
 vendor/
 
+# Python virtual environments
+venv/
+env/
+ai_module/venv/
+ai_module/env/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# Python package files
+*.egg-info/
+dist/
+build/
+
+# ChromaDB data (vector database storage)
+ai_module/chromadb_data/
+chromadb_data/
+
+# Ollama models (too large for git)
+ai_module/models/
+
 # Environment files
 .env
 .env.local
