@@ -9,6 +9,25 @@
 // Load configuration files
 require_once __DIR__ . '/../config/config.php';
 
+// Load language support
+require_once __DIR__ . '/language.php';
+
+// Handle language switching
+if (isset($_GET['lang'])) {
+    setLanguage($_GET['lang']);
+    // Redirect to remove lang parameter from URL
+    $redirect_url = strtok($_SERVER['REQUEST_URI'], '?');
+    if (!empty($_SERVER['QUERY_STRING'])) {
+        parse_str($_SERVER['QUERY_STRING'], $params);
+        unset($params['lang']);
+        if (!empty($params)) {
+            $redirect_url .= '?' . http_build_query($params);
+        }
+    }
+    header('Location: ' . $redirect_url);
+    exit;
+}
+
 /**
  * Log error to file with context
  * 
@@ -203,15 +222,18 @@ function sanitizeText($text) {
  * @return string Sanitized HTML
  */
 function sanitizeHTML($html) {
-    // Allow only safe HTML tags
-    $allowedTags = '<p><br><strong><em><u><ul><ol><li><a><h1><h2><h3><h4><h5><h6><blockquote><code><pre>';
+    // Allow safe HTML tags including images, tables, and formatting
+    $allowedTags = '<p><br><strong><b><em><i><u><s><ul><ol><li><a><h1><h2><h3><h4><h5><h6>' .
+                   '<blockquote><code><pre><img><table><thead><tbody><tr><th><td>' .
+                   '<span><div><hr><sup><sub>';
     
     // Strip disallowed tags
     $html = strip_tags($html, $allowedTags);
     
-    // Remove javascript: and data: protocols from links
+    // Remove javascript: and data: protocols from links and images
     $html = preg_replace('/(<a[^>]+href=[\"\']?)javascript:/i', '$1', $html);
     $html = preg_replace('/(<a[^>]+href=[\"\']?)data:/i', '$1', $html);
+    $html = preg_replace('/(<img[^>]+src=[\"\']?)javascript:/i', '$1', $html);
     
     // Remove event handlers
     $html = preg_replace('/(<[^>]+)on\w+\s*=\s*["\'][^"\']*["\']/i', '$1', $html);
@@ -424,10 +446,10 @@ function formatDate($date, $format = 'd-m-Y H:i') {
 function getStatusBadge($status) {
     $badges = [
         'open' => '<span class="badge bg-primary">Open</span>',
-        'in_progress' => '<span class="badge bg-info">In Progress</span>',
-        'pending' => '<span class="badge bg-warning">Pending</span>',
-        'resolved' => '<span class="badge bg-success">Resolved</span>',
-        'closed' => '<span class="badge bg-secondary">Closed</span>'
+        'in_progress' => '<span class="badge bg-info">In Behandeling</span>',
+        'pending' => '<span class="badge bg-warning">Wachtend</span>',
+        'resolved' => '<span class="badge bg-success">Opgelost</span>',
+        'closed' => '<span class="badge bg-secondary">Gesloten</span>'
     ];
     
     return $badges[$status] ?? '<span class="badge bg-secondary">' . ucfirst($status) . '</span>';
@@ -441,9 +463,9 @@ function getStatusBadge($status) {
  */
 function getPriorityBadge($priority) {
     $badges = [
-        'low' => '<span class="badge bg-secondary">Low</span>',
-        'medium' => '<span class="badge bg-info">Medium</span>',
-        'high' => '<span class="badge bg-warning">High</span>',
+        'low' => '<span class="badge bg-secondary">Laag</span>',
+        'medium' => '<span class="badge bg-info">Gemiddeld</span>',
+        'high' => '<span class="badge bg-warning">Hoog</span>',
         'urgent' => '<span class="badge bg-danger">Urgent</span>'
     ];
     
@@ -458,9 +480,9 @@ function getPriorityBadge($priority) {
  */
 function getRoleBadge($role) {
     $badges = [
-        'user' => '<span class="badge bg-primary">User</span>',
+        'user' => '<span class="badge bg-primary">Gebruiker</span>',
         'agent' => '<span class="badge bg-success">Agent</span>',
-        'admin' => '<span class="badge bg-danger">Admin</span>'
+        'admin' => '<span class="badge bg-danger">Beheerder</span>'
     ];
     
     return $badges[$role] ?? '<span class="badge bg-secondary">' . ucfirst($role) . '</span>';

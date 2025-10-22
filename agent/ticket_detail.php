@@ -10,6 +10,7 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Ticket.php';
 require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/TemplateParser.php';
 
 // Initialize session and check authentication
 initSession();
@@ -37,6 +38,32 @@ $errors = [];
 $success = '';
 $error = '';
 
+// Get ticket details first (needed for form processing)
+$ticket = $ticketClass->getTicketById($ticketId);
+
+if (!$ticket) {
+    $_SESSION['error'] = 'Ticket not found';
+    redirectTo(SITE_URL . '/agent/dashboard.php');
+}
+
+// Get templates for comment and resolution
+$templates = $db->fetchAll("SELECT * FROM ticket_templates WHERE is_active = 1 AND template_type IN ('comment', 'resolution') ORDER BY name");
+
+// Get user data for template parsing
+$ticketUser = $db->fetchOne("SELECT * FROM users WHERE user_id = ?", [$ticket['user_id']]);
+
+// Get agent data for template parsing
+$ticketAgent = null;
+if (!empty($ticket['assigned_agent_id'])) {
+    $ticketAgent = $db->fetchOne("SELECT * FROM users WHERE user_id = ?", [$ticket['assigned_agent_id']]);
+}
+
+// Parse templates with ticket data
+foreach ($templates as &$template) {
+    $template['content'] = TemplateParser::parse($template['content'], $ticket, $ticketUser, $ticketAgent);
+}
+unset($template); // Break reference
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     // Validate CSRF token
@@ -44,6 +71,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $error = 'Invalid security token. Please try again.';
     } else {
         switch ($_POST['action']) {
+            case 'delete_comment':
+                // Only admins can delete comments
+                if ($userRole === 'admin') {
+                    $commentId = filter_var($_POST['comment_id'] ?? 0, FILTER_VALIDATE_INT);
+                    
+                    if (!$commentId) {
+                        $error = 'Invalid comment ID';
+                    } else {
+                        $result = $ticketClass->deleteComment($commentId, $ticketId);
+                        
+                        if ($result) {
+                            $success = 'Comment deleted successfully';
+                            // Refresh comments
+                            $comments = $ticketClass->getComments($ticketId, true);
+                        } else {
+                            $error = $ticketClass->getError() ?: 'Failed to delete comment';
+                        }
+                    }
+                } else {
+                    $error = 'You do not have permission to delete comments';
+                }
+                break;
+                
             case 'assign':
                 $assignedAgentId = filter_var($_POST['assigned_agent_id'] ?? 0, FILTER_VALIDATE_INT);
                 
@@ -81,14 +131,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 break;
                 
+            case 'update_ticket':
+                // Combined update for both assignment and status
+                $assignedAgentId = filter_var($_POST['assigned_agent_id'] ?? 0, FILTER_VALIDATE_INT);
+                $status = $_POST['status'] ?? '';
+                $resolution = trim($_POST['resolution'] ?? '');
+                
+                $updated = false;
+                $messages = [];
+                
+                // Update assignment if changed
+                if ($assignedAgentId > 0 && $assignedAgentId != $ticket['assigned_agent_id']) {
+                    if ($ticketClass->assignTicket($ticketId, $assignedAgentId)) {
+                        $messages[] = 'Assignment updated';
+                        $updated = true;
+                    }
+                }
+                
+                // Update status if changed
+                if (!empty($status) && $status != $ticket['status']) {
+                    if ($ticketClass->updateStatus($ticketId, $status, $resolution)) {
+                        $messages[] = 'Status updated';
+                        $updated = true;
+                    }
+                }
+                
+                if ($updated) {
+                    $success = implode(' and ', $messages) . ' successfully';
+                    $ticket = $ticketClass->getTicketById($ticketId);
+                } elseif (empty($messages)) {
+                    $error = 'No changes detected';
+                } else {
+                    $error = 'Failed to update ticket';
+                }
+                break;
+                
             case 'add_comment':
                 $comment = trim($_POST['comment'] ?? '');
                 $isInternal = isset($_POST['is_internal']) && $_POST['is_internal'] == '1';
+                $closeTicket = isset($_POST['close_ticket']) && $_POST['close_ticket'] == '1';
                 
                 if (empty($comment)) {
                     $error = 'Comment cannot be empty';
                 } else {
                     $result = $ticketClass->addComment($ticketId, $userId, $comment, $isInternal);
+                    
+                    // If close_ticket is checked, also close the ticket with comment as resolution
+                    if ($result && $closeTicket) {
+                        $ticketClass->updateStatus($ticketId, 'closed', $comment);
+                        $success = 'Comment added and ticket closed successfully';
+                    } else if ($result) {
+                        $success = 'Comment added successfully';
+                    }
                     
                     if ($result) {
                         $success = 'Comment added successfully';
@@ -106,13 +200,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Get ticket details
+// Refresh ticket details after any updates
 $ticket = $ticketClass->getTicketById($ticketId);
-
-if (!$ticket) {
-    $_SESSION['error'] = 'Ticket not found';
-    redirectTo(SITE_URL . '/agent/dashboard.php');
-}
 
 // Get ticket comments (including internal)
 $comments = $ticketClass->getComments($ticketId, true);
@@ -142,58 +231,18 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo SITE_URL; ?>/agent/dashboard.php">
-                <i class="bi bi-ticket-perforated"></i> <?php echo escapeOutput(SITE_NAME); ?>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/agent/dashboard.php">
-                            <i class="bi bi-house-door"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/agent/my_tickets.php">
-                            <i class="bi bi-person-check"></i> My Assigned Tickets
-                        </a>
-                    </li>
-                    <?php if ($userRole === 'admin'): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/index.php">
-                            <i class="bi bi-gear"></i> Admin Panel
-                        </a>
-                    </li>
-                    <?php endif; ?>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?php echo escapeOutput($userName); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout.php">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <div class="container-fluid">
+        <div class="row">
+            <?php include __DIR__ . '/../includes/sidebar.php'; ?>
 
-    <div class="container-fluid mt-4">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>/agent/dashboard.php">Dashboard</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Ticket <?php echo escapeOutput($ticket['ticket_number']); ?></li>
-            </ol>
-        </nav>
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="pt-3">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>/agent/dashboard.php">Dashboard</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Ticket <?php echo escapeOutput($ticket['ticket_number']); ?></li>
+                    </ol>
+                </nav>
 
         <!-- Success/Error Messages -->
         <?php if ($success): ?>
@@ -270,6 +319,55 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
                         </div>
                         <?php endif; ?>
 
+                        <!-- Dynamic Field Values -->
+                        <?php
+                        $fieldValues = $ticketClass->getFieldValues($ticketId);
+                        if (!empty($fieldValues)):
+                        ?>
+                        <div class="mb-3">
+                            <strong>Aanvullende Informatie:</strong>
+                            <div class="border rounded p-3 mt-2 bg-light">
+                                <dl class="row mb-0">
+                                    <?php foreach ($fieldValues as $field): ?>
+                                        <dt class="col-sm-4"><?php echo escapeOutput($field['field_label']); ?></dt>
+                                        <dd class="col-sm-8">
+                                            <?php
+                                            // Format value based on field type
+                                            $value = $field['field_value'];
+                                            
+                                            switch ($field['field_type']) {
+                                                case 'checkbox':
+                                                    if (is_array($value)) {
+                                                        echo escapeOutput(implode(', ', $value));
+                                                    } else {
+                                                        echo $value ? 'Ja' : 'Nee';
+                                                    }
+                                                    break;
+                                                    
+                                                case 'date':
+                                                    $date = DateTime::createFromFormat('Y-m-d', $value);
+                                                    echo $date ? $date->format('d-m-Y') : escapeOutput($value);
+                                                    break;
+                                                    
+                                                case 'email':
+                                                    echo '<a href="mailto:' . escapeOutput($value) . '">' . escapeOutput($value) . '</a>';
+                                                    break;
+                                                    
+                                                case 'tel':
+                                                    echo '<a href="tel:' . escapeOutput($value) . '">' . escapeOutput($value) . '</a>';
+                                                    break;
+                                                    
+                                                default:
+                                                    echo escapeOutput($value);
+                                            }
+                                            ?>
+                                        </dd>
+                                    <?php endforeach; ?>
+                                </dl>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
                         <!-- Attachments -->
                         <?php if (!empty($attachments)): ?>
                         <div class="mb-3">
@@ -313,9 +411,21 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
                                                     <span class="badge bg-warning text-dark ms-1">Internal</span>
                                                 <?php endif; ?>
                                             </div>
-                                            <small class="text-muted"><?php echo formatDate($comment['created_at']); ?></small>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <small class="text-muted"><?php echo formatDate($comment['created_at']); ?></small>
+                                                <?php if ($userRole === 'admin'): ?>
+                                                    <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this comment?');">
+                                                        <input type="hidden" name="action" value="delete_comment">
+                                                        <input type="hidden" name="comment_id" value="<?php echo $comment['comment_id']; ?>">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete comment">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
-                                        <p class="mb-0"><?php echo nl2br(escapeOutput($comment['comment'])); ?></p>
+                                        <div class="mb-0"><?php echo $comment['comment']; ?></div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -325,20 +435,50 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
                         <div class="card bg-light">
                             <div class="card-body">
                                 <h6 class="card-title">Add Comment</h6>
-                                <form method="POST" action="">
+                                <form method="POST" action="" id="commentForm">
                                     <input type="hidden" name="action" value="add_comment">
                                     <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                                     
+                                    <?php if (!empty($templates)): ?>
                                     <div class="mb-3">
-                                        <textarea name="comment" class="form-control" rows="4" required 
+                                        <label class="form-label"><i class="bi bi-file-text"></i> Sjabloon gebruiken (optioneel)</label>
+                                        <select class="form-select" id="templateSelect" onchange="loadTemplate(this.value, 'comment')">
+                                            <option value="">-- Selecteer een sjabloon --</option>
+                                            <?php foreach ($templates as $tpl): ?>
+                                                <?php if ($tpl['template_type'] === 'comment'): ?>
+                                                <option value="<?php echo $tpl['template_id']; ?>" 
+                                                        data-content="<?php echo htmlspecialchars($tpl['content'], ENT_QUOTES); ?>">
+                                                    <?php echo escapeOutput($tpl['name']); ?>
+                                                </option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <small class="form-text text-muted">Selecteer een sjabloon om de inhoud automatisch in te vullen</small>
+                                    </div>
+                                    <?php else: ?>
+                                    <div class="alert alert-info alert-sm">
+                                        <small><i class="bi bi-info-circle"></i> Geen sjablonen beschikbaar. Maak eerst sjablonen aan in Admin → Sjablonen</small>
+                                    </div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="mb-3">
+                                        <textarea name="comment" id="comment" class="form-control" rows="8" 
                                                   placeholder="Enter your comment..."></textarea>
                                     </div>
                                     
-                                    <div class="form-check mb-3">
+                                    <div class="form-check mb-2">
                                         <input type="checkbox" name="is_internal" id="is_internal" class="form-check-input" value="1">
                                         <label for="is_internal" class="form-check-label">
                                             <i class="bi bi-lock"></i> Internal comment (not visible to user)
                                         </label>
+                                    </div>
+                                    
+                                    <div class="form-check mb-3">
+                                        <input type="checkbox" name="close_ticket" id="close_ticket" class="form-check-input" value="1">
+                                        <label for="close_ticket" class="form-check-label text-danger">
+                                            <i class="bi bi-x-circle"></i> <strong>Close ticket with this comment as resolution</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Deze comment wordt gebruikt als afsluitreden en verstuurd via email</small>
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary">
@@ -353,19 +493,21 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
 
             <!-- Right Column: Actions -->
             <div class="col-lg-4">
-                <!-- Assignment -->
+                <!-- Update Ticket (Assignment & Status) -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-person-plus"></i> Assignment</h5>
+                        <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Update Ticket</h5>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="">
-                            <input type="hidden" name="action" value="assign">
+                        <form method="POST" action="" id="updateTicketForm">
+                            <input type="hidden" name="action" value="update_ticket">
                             <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                             
                             <div class="mb-3">
-                                <label for="assigned_agent_id" class="form-label">Assign to Agent</label>
-                                <select name="assigned_agent_id" id="assigned_agent_id" class="form-select" required>
+                                <label for="assigned_agent_id" class="form-label">
+                                    <i class="bi bi-person-plus"></i> Assign to Agent
+                                </label>
+                                <select name="assigned_agent_id" id="assigned_agent_id" class="form-select">
                                     <option value="">Select Agent...</option>
                                     <?php foreach ($agents as $agent): ?>
                                         <option value="<?php echo $agent['user_id']; ?>" 
@@ -374,79 +516,132 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <?php if ($ticket['assigned_agent_id']): ?>
+                                    <small class="text-muted">
+                                        Current: <?php echo escapeOutput($ticket['agent_first_name'] . ' ' . $ticket['agent_last_name']); ?>
+                                    </small>
+                                <?php endif; ?>
                             </div>
-                            
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle"></i> Assign Ticket
-                            </button>
-                        </form>
-                        
-                        <?php if ($ticket['assigned_agent_id']): ?>
-                            <div class="alert alert-info mt-3 mb-0">
-                                <small>
-                                    <strong>Currently assigned to:</strong><br>
-                                    <?php echo escapeOutput($ticket['agent_first_name'] . ' ' . $ticket['agent_last_name']); ?>
-                                </small>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <!-- Status Update -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Update Status</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="" id="statusForm">
-                            <input type="hidden" name="action" value="update_status">
-                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                             
                             <div class="mb-3">
-                                <label for="status" class="form-label">New Status</label>
-                                <select name="status" id="status" class="form-select" required onchange="toggleResolution()">
-                                    <option value="">Select Status...</option>
+                                <label for="status" class="form-label">
+                                    <i class="bi bi-arrow-repeat"></i> Status
+                                </label>
+                                <select name="status" id="status" class="form-select" onchange="toggleResolution()">
+                                    <option value="">Keep current status</option>
                                     <option value="open" <?php echo ($ticket['status'] === 'open') ? 'selected' : ''; ?>>Open</option>
                                     <option value="in_progress" <?php echo ($ticket['status'] === 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
                                     <option value="pending" <?php echo ($ticket['status'] === 'pending') ? 'selected' : ''; ?>>Pending</option>
                                     <option value="resolved" <?php echo ($ticket['status'] === 'resolved') ? 'selected' : ''; ?>>Resolved</option>
                                     <option value="closed" <?php echo ($ticket['status'] === 'closed') ? 'selected' : ''; ?>>Closed</option>
                                 </select>
+                                <div class="mt-2">
+                                    <small class="text-muted d-block">Current status:</small>
+                                    <div class="mt-1"><?php echo getStatusBadge($ticket['status']); ?></div>
+                                </div>
                             </div>
                             
                             <div class="mb-3" id="resolutionField" style="display: none;">
+                                <?php if (!empty($templates)): ?>
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="bi bi-file-text"></i> Sjabloon gebruiken (optioneel)</label>
+                                    <select class="form-select" id="resolutionTemplateSelect" onchange="loadTemplate(this.value, 'resolution')">
+                                        <option value="">-- Selecteer een sjabloon --</option>
+                                        <?php foreach ($templates as $tpl): ?>
+                                            <?php if ($tpl['template_type'] === 'resolution'): ?>
+                                            <option value="<?php echo $tpl['template_id']; ?>" 
+                                                    data-content="<?php echo htmlspecialchars($tpl['content'], ENT_QUOTES); ?>">
+                                                <?php echo escapeOutput($tpl['name']); ?>
+                                            </option>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <small class="form-text text-muted">Selecteer een sjabloon om de inhoud automatisch in te vullen</small>
+                                </div>
+                                <?php endif; ?>
+                                
                                 <label for="resolution" class="form-label">Resolution <span class="text-danger">*</span></label>
                                 <textarea name="resolution" id="resolution" class="form-control" rows="4" 
                                           placeholder="Describe how the issue was resolved..."></textarea>
-                                <small class="text-muted">Required when marking as resolved</small>
+                                <small class="text-muted">Required when marking as resolved or closed</small>
                             </div>
                             
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle"></i> Update Status
+                                <i class="bi bi-check-circle"></i> Update Ticket
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <footer class="mt-5 py-3 bg-light">
-        <div class="container text-center">
-            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. All rights reserved.</p>
-        </div>
-    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- TinyMCE for Comments -->
+    <script src="https://cdn.tiny.cloud/1/f5xc5i53b0di57yjmcf5954fyhbtmb9k28r3pu0nn19ol86c/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
+        // Initialize TinyMCE for comment field
+        tinymce.init({
+            selector: '#comment',
+            height: 300,
+            menubar: false,
+            plugins: ['lists', 'link', 'code', 'table'],
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | removeformat code',
+            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; }',
+            branding: false,
+            promotion: false,
+            statusbar: false,
+            resize: false,
+            setup: function(editor) {
+                editor.on('init', function() {
+                    // Form submit handler to save TinyMCE content
+                    document.getElementById('commentForm').addEventListener('submit', function(e) {
+                        // Trigger TinyMCE to save content to textarea
+                        tinymce.triggerSave();
+                        
+                        // Check if comment is empty
+                        var content = tinymce.get('comment').getContent({format: 'text'}).trim();
+                        if (content === '') {
+                            e.preventDefault();
+                            alert('Please enter a comment before submitting.');
+                            return false;
+                        }
+                    });
+                });
+            }
+        });
+        
+        // Initialize TinyMCE for resolution field
+        tinymce.init({
+            selector: '#resolution',
+            height: 250,
+            menubar: false,
+            plugins: ['lists', 'link', 'code', 'table'],
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | removeformat code',
+            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; }',
+            branding: false,
+            promotion: false,
+            statusbar: false,
+            resize: false
+        });
+        
         function toggleResolution() {
             const statusSelect = document.getElementById('status');
             const resolutionField = document.getElementById('resolutionField');
             const resolutionTextarea = document.getElementById('resolution');
+            const resolutionLabel = resolutionField.querySelector('label');
             
-            if (statusSelect.value === 'resolved') {
+            if (statusSelect.value === 'resolved' || statusSelect.value === 'closed') {
                 resolutionField.style.display = 'block';
                 resolutionTextarea.required = true;
+                
+                // Update label based on status
+                if (statusSelect.value === 'closed') {
+                    resolutionLabel.innerHTML = 'Closure Reason <span class="text-danger">*</span>';
+                    resolutionTextarea.placeholder = 'Describe why the ticket is being closed...';
+                } else {
+                    resolutionLabel.innerHTML = 'Resolution <span class="text-danger">*</span>';
+                    resolutionTextarea.placeholder = 'Describe how the issue was resolved...';
+                }
             } else {
                 resolutionField.style.display = 'none';
                 resolutionTextarea.required = false;
@@ -455,6 +650,34 @@ $pageTitle = 'Ticket Details - ' . $ticket['ticket_number'];
         
         // Initialize on page load
         toggleResolution();
+        
+        // Load template into textarea or TinyMCE
+        function loadTemplate(templateId, targetField) {
+            if (!templateId) return;
+            
+            const select = targetField === 'resolution' ? 
+                document.getElementById('resolutionTemplateSelect') : 
+                document.getElementById('templateSelect');
+            
+            const option = select.options[select.selectedIndex];
+            const content = option.getAttribute('data-content');
+            
+            if (content) {
+                // Check if TinyMCE is initialized for this field
+                if (tinymce.get(targetField)) {
+                    tinymce.get(targetField).setContent(content);
+                } else {
+                    // Fallback to textarea
+                    const textarea = document.getElementById(targetField);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = content;
+                    textarea.value = tempDiv.textContent || tempDiv.innerText || '';
+                }
+            }
+        }
     </script>
+            </main>
+        </div>
+    </div>
 </body>
 </html>

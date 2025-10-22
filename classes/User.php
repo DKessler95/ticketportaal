@@ -56,7 +56,7 @@ class User {
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
             
             // Insert user into database
-            $sql = "INSERT INTO users (email, password, first_name, last_name, department, role, created_at) 
+            $sql = "INSERT INTO users (email, password, first_name, last_name, department_id, role, created_at) 
                     VALUES (?, ?, ?, ?, ?, ?, NOW())";
             
             $result = $this->db->execute($sql, [
@@ -64,7 +64,7 @@ class User {
                 $hashedPassword,
                 $firstName,
                 $lastName,
-                $department,
+                $department, // This is now department_id
                 $role
             ]);
             
@@ -107,7 +107,7 @@ class User {
             
             // Fetch user from database
             $user = $this->db->fetchOne(
-                "SELECT user_id, email, password, first_name, last_name, role, is_active 
+                "SELECT user_id, email, password, first_name, last_name, role, location, is_active 
                  FROM users WHERE email = ?",
                 [$email]
             );
@@ -187,6 +187,7 @@ class User {
         $_SESSION['email'] = $user['email'];
         $_SESSION['full_name'] = $user['first_name'] . ' ' . $user['last_name'];
         $_SESSION['role'] = $user['role'];
+        $_SESSION['location'] = $user['location'] ?? 'Kruit en Kramer';
         $_SESSION['last_activity'] = time();
         $_SESSION['created'] = time();
     }
@@ -724,10 +725,11 @@ class User {
     public function getAllUsers() {
         try {
             $users = $this->db->fetchAll(
-                "SELECT user_id, email, first_name, last_name, department, role, 
-                        created_at, last_login, is_active 
-                 FROM users 
-                 ORDER BY last_name, first_name"
+                "SELECT u.user_id, u.email, u.first_name, u.last_name, u.department_id, 
+                        d.name as department_name, u.location, u.role, u.created_at, u.last_login, u.is_active 
+                 FROM users u
+                 LEFT JOIN departments d ON u.department_id = d.department_id
+                 ORDER BY u.last_name, u.first_name"
             );
             
             return $users ?: [];

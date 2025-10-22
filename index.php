@@ -22,31 +22,38 @@ if (checkLogin()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo SITE_NAME; ?> - ICT Support Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
     <style>
         .hero-section {
-            background: linear-gradient(135deg, #0066cc 0%, #004999 100%);
+            background: linear-gradient(135deg, #004E89 0%, #1A7F8E 100%);
             color: white;
-            padding: 80px 0;
+            padding: 100px 0;
             margin-bottom: 50px;
         }
         .feature-icon {
-            width: 60px;
-            height: 60px;
-            background-color: #0066cc;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #FF6B35 0%, #FF8555 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
             color: white;
-            font-size: 24px;
+            font-size: 28px;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
         }
         .feature-card {
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
         }
         .feature-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        .navbar-brand img {
+            max-height: 50px;
         }
     </style>
 </head>
@@ -54,8 +61,10 @@ if (checkLogin()) {
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="index.php">
-                <?php echo SITE_NAME; ?>
+            <a class="navbar-brand" href="index.php">
+                <img src="<?php echo SITE_URL; ?>/assets/images/logo/logo-kruit-en-kramer.svg" 
+                     alt="Kruit & Kramer" 
+                     style="max-height: 45px;">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -63,13 +72,10 @@ if (checkLogin()) {
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="knowledge_base.php">Knowledge Base</a>
+                        <a class="nav-link" href="knowledge_base.php">Kennisbank</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="login.php">Inloggen</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-primary ms-2" href="register.php">Registreren</a>
+                        <a class="btn btn-primary ms-2" href="login.php">Inloggen</a>
                     </li>
                 </ul>
             </div>
@@ -89,12 +95,21 @@ if (checkLogin()) {
                         Meld problemen, volg de voortgang en vind oplossingen in onze kennisbank.
                     </p>
                     <div class="d-flex gap-3 justify-content-center flex-wrap">
-                        <a href="register.php" class="btn btn-light btn-lg px-4">
-                            Account aanmaken
+                        <a href="login.php" class="btn btn-light btn-lg px-5">
+                            <i class="bi bi-box-arrow-in-right"></i> Inloggen
                         </a>
-                        <a href="login.php" class="btn btn-outline-light btn-lg px-4">
-                            Inloggen
+                        <a href="knowledge_base.php" class="btn btn-outline-light btn-lg px-5">
+                            <i class="bi bi-book"></i> Kennisbank
                         </a>
+                    </div>
+                    <div class="mt-4">
+                        <p class="mb-0">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Geen toegang?</strong> Neem contact op met de ICT afdeling van Kruit & Kramer
+                        </p>
+                        <p class="mb-0">
+                            <i class="bi bi-telephone-fill"></i> Telefoon: <strong>777</strong>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -231,14 +246,14 @@ if (checkLogin()) {
             <div class="col-lg-8 mx-auto text-center">
                 <h2 class="fw-bold mb-4">Klaar om te beginnen?</h2>
                 <p class="lead text-muted mb-4">
-                    Maak een account aan en begin direct met het melden van ICT problemen
+                    Log in met uw Kruit & Kramer account en begin direct met het melden van ICT problemen
                 </p>
                 <div class="d-flex gap-3 justify-content-center flex-wrap">
-                    <a href="register.php" class="btn btn-primary btn-lg px-5">
-                        Registreren
+                    <a href="login.php" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-box-arrow-in-right"></i> Inloggen
                     </a>
                     <a href="knowledge_base.php" class="btn btn-outline-primary btn-lg px-5">
-                        Bekijk Kennisbank
+                        <i class="bi bi-book"></i> Bekijk Kennisbank
                     </a>
                 </div>
             </div>
@@ -246,29 +261,37 @@ if (checkLogin()) {
     </section>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
+    <footer class="py-5 mt-5" style="background: linear-gradient(135deg, #004E89 0%, #1A7F8E 100%);">
         <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5><?php echo SITE_NAME; ?></h5>
-                    <p class="text-muted mb-0">
-                        Professioneel ICT support ticketsysteem voor Kruit & Kramer
+            <div class="row text-white">
+                <div class="col-md-6 mb-4 mb-md-0">
+                    <img src="<?php echo SITE_URL; ?>/assets/images/logo/logo-kruit-en-kramer.svg" 
+                         alt="Kruit & Kramer" 
+                         class="mb-3" 
+                         style="max-width: 180px; filter: brightness(0) invert(1);">
+                    <p class="mb-2">
+                        Professioneel ICT support ticketsysteem
+                    </p>
+                    <p class="mb-0">
+                        <i class="bi bi-telephone-fill"></i> Telefoon: <strong>777</strong>
                     </p>
                 </div>
                 <div class="col-md-6 text-md-end">
+                    <h5 class="mb-3">Snelle Links</h5>
                     <p class="mb-2">
-                        <a href="knowledge_base.php" class="text-white text-decoration-none">Knowledge Base</a>
+                        <a href="knowledge_base.php" class="text-white text-decoration-none">
+                            <i class="bi bi-book"></i> Kennisbank
+                        </a>
                     </p>
                     <p class="mb-2">
-                        <a href="login.php" class="text-white text-decoration-none">Inloggen</a>
-                    </p>
-                    <p class="mb-0">
-                        <a href="register.php" class="text-white text-decoration-none">Registreren</a>
+                        <a href="login.php" class="text-white text-decoration-none">
+                            <i class="bi bi-box-arrow-in-right"></i> Inloggen
+                        </a>
                     </p>
                 </div>
             </div>
-            <hr class="my-3 bg-secondary">
-            <div class="text-center text-muted">
+            <hr class="my-4" style="border-color: rgba(255,255,255,0.2);">
+            <div class="text-center text-white">
                 <small>&copy; <?php echo date('Y'); ?> Kruit & Kramer. Alle rechten voorbehouden.</small>
             </div>
         </div>

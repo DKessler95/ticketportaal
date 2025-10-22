@@ -55,67 +55,48 @@ $pageTitle = 'Reports & Analytics';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.1/dist/apexcharts.min.js"></script>
+    <style>
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .stat-card-modern {
+            background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-orange-light) 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+            transition: transform 0.3s ease;
+        }
+        .stat-card-modern:hover {
+            transform: translateY(-4px);
+        }
+        .stat-card-modern h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        .stat-card-modern p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo SITE_URL; ?>/admin/index.php">
-                <i class="bi bi-ticket-perforated"></i> <?php echo escapeOutput(SITE_NAME); ?>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/index.php">
-                            <i class="bi bi-house-door"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/users.php">
-                            <i class="bi bi-people"></i> Users
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/categories.php">
-                            <i class="bi bi-tags"></i> Categories
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/knowledge_base.php">
-                            <i class="bi bi-book"></i> Knowledge Base
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="<?php echo SITE_URL; ?>/admin/reports.php">
-                            <i class="bi bi-graph-up"></i> Reports
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?php echo escapeOutput($userName); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout.php">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid mt-4">
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-12">
-                <h1 class="mb-4"><i class="bi bi-graph-up"></i> Reports & Analytics</h1>
-            </div>
-        </div>
+            <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"><i class="bi bi-graph-up"></i> Rapporten & Analyses</h1>
+                </div>
 
         <!-- Date Range Filter -->
         <div class="row mb-4">
@@ -124,26 +105,26 @@ $pageTitle = 'Reports & Analytics';
                     <div class="card-body">
                         <form method="GET" action="" class="row g-3 align-items-end">
                             <div class="col-md-3">
-                                <label for="start_date" class="form-label">Start Date</label>
+                                <label for="start_date" class="form-label">Startdatum</label>
                                 <input type="date" class="form-control" id="start_date" name="start_date" 
                                        value="<?php echo escapeOutput($startDate); ?>" required>
                             </div>
                             <div class="col-md-3">
-                                <label for="end_date" class="form-label">End Date</label>
+                                <label for="end_date" class="form-label">Einddatum</label>
                                 <input type="date" class="form-control" id="end_date" name="end_date" 
                                        value="<?php echo escapeOutput($endDate); ?>" required>
                             </div>
                             <div class="col-md-3">
-                                <label for="period" class="form-label">Group By</label>
+                                <label for="period" class="form-label">Groeperen Op</label>
                                 <select class="form-select" id="period" name="period">
-                                    <option value="day" <?php echo $period === 'day' ? 'selected' : ''; ?>>Day</option>
+                                    <option value="day" <?php echo $period === 'day' ? 'selected' : ''; ?>>Dag</option>
                                     <option value="week" <?php echo $period === 'week' ? 'selected' : ''; ?>>Week</option>
-                                    <option value="month" <?php echo $period === 'month' ? 'selected' : ''; ?>>Month</option>
+                                    <option value="month" <?php echo $period === 'month' ? 'selected' : ''; ?>>Maand</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-funnel"></i> Apply Filter
+                                    <i class="bi bi-funnel"></i> Filter Toepassen
                                 </button>
                             </div>
                         </form>
@@ -157,15 +138,15 @@ $pageTitle = 'Reports & Analytics';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Ticket Volume by Period</h5>
+                        <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Ticketvolume per Periode</h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($ticketVolume)): ?>
                             <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> No ticket data available for the selected period.
+                                <i class="bi bi-info-circle"></i> Geen ticketgegevens beschikbaar voor de geselecteerde periode.
                             </div>
                         <?php else: ?>
-                            <canvas id="ticketVolumeChart" height="80"></canvas>
+                            <div id="ticketVolumeChart" style="min-height: 350px;"></div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -178,7 +159,7 @@ $pageTitle = 'Reports & Analytics';
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-star"></i> Satisfaction Metrics</h5>
+                        <h5 class="mb-0"><i class="bi bi-star"></i> Tevredenheidsmetrieken</h5>
                     </div>
                     <div class="card-body">
                         <div class="row text-center mb-3">
@@ -186,22 +167,22 @@ $pageTitle = 'Reports & Analytics';
                                 <h2 class="text-primary mb-0">
                                     <?php echo number_format($satisfactionMetrics['avg_rating'], 2); ?>
                                 </h2>
-                                <small class="text-muted">Average Rating</small>
+                                <small class="text-muted">Gemiddelde Beoordeling</small>
                             </div>
                             <div class="col-md-4">
                                 <h2 class="text-success mb-0">
                                     <?php echo number_format($satisfactionMetrics['total_ratings']); ?>
                                 </h2>
-                                <small class="text-muted">Total Ratings</small>
+                                <small class="text-muted">Totaal Beoordelingen</small>
                             </div>
                             <div class="col-md-4">
                                 <h2 class="text-info mb-0">
                                     <?php echo number_format($satisfactionMetrics['response_rate'], 1); ?>%
                                 </h2>
-                                <small class="text-muted">Response Rate</small>
+                                <small class="text-muted">Responspercentage</small>
                             </div>
                         </div>
-                        <canvas id="satisfactionChart" height="150"></canvas>
+                        <div id="satisfactionChart" style="min-height: 300px;"></div>
                     </div>
                 </div>
             </div>
@@ -209,7 +190,7 @@ $pageTitle = 'Reports & Analytics';
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-star-fill"></i> Rating Distribution</h5>
+                        <h5 class="mb-0"><i class="bi bi-star-fill"></i> Beoordelingsverdeling</h5>
                     </div>
                     <div class="card-body">
                         <?php for ($i = 5; $i >= 1; $i--): ?>
@@ -240,25 +221,25 @@ $pageTitle = 'Reports & Analytics';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Average Resolution Time by Category</h5>
+                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Gemiddelde Oplostijd per Categorie</h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($resolutionTimeByCategory)): ?>
                             <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> No resolution data available for the selected period.
+                                <i class="bi bi-info-circle"></i> Geen oplosgegevens beschikbaar voor de geselecteerde periode.
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>Category</th>
-                                            <th>SLA Hours</th>
-                                            <th>Total Tickets</th>
-                                            <th>Resolved</th>
-                                            <th>Avg Resolution (Hours)</th>
-                                            <th>Min/Max (Hours)</th>
-                                            <th>SLA Compliance</th>
+                                            <th>Categorie</th>
+                                            <th>SLA Uren</th>
+                                            <th>Totaal Tickets</th>
+                                            <th>Opgelost</th>
+                                            <th>Gem. Oplostijd (Uren)</th>
+                                            <th>Min/Max (Uren)</th>
+                                            <th>SLA Naleving</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -313,12 +294,12 @@ $pageTitle = 'Reports & Analytics';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-person-badge"></i> Agent Performance</h5>
+                        <h5 class="mb-0"><i class="bi bi-person-badge"></i> Agentprestaties</h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($agentPerformance)): ?>
                             <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> No agent performance data available for the selected period.
+                                <i class="bi bi-info-circle"></i> Geen agentprestatiegegevens beschikbaar voor de geselecteerde periode.
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
@@ -326,13 +307,13 @@ $pageTitle = 'Reports & Analytics';
                                     <thead>
                                         <tr>
                                             <th>Agent</th>
-                                            <th>Email</th>
-                                            <th>Total Assigned</th>
-                                            <th>In Progress</th>
-                                            <th>Resolved</th>
-                                            <th>Avg Resolution (Hours)</th>
-                                            <th>Avg Satisfaction</th>
-                                            <th>Rated Tickets</th>
+                                            <th>E-mail</th>
+                                            <th>Totaal Toegewezen</th>
+                                            <th>In Behandeling</th>
+                                            <th>Opgelost</th>
+                                            <th>Gem. Oplostijd (Uren)</th>
+                                            <th>Gem. Tevredenheid</th>
+                                            <th>Beoordeelde Tickets</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -381,27 +362,27 @@ $pageTitle = 'Reports & Analytics';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Category Analysis</h5>
+                        <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Categorieanalyse</h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($categoryAnalysis)): ?>
                             <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> No category data available for the selected period.
+                                <i class="bi bi-info-circle"></i> Geen categoriegegevens beschikbaar voor de geselecteerde periode.
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>Category</th>
-                                            <th>Total Tickets</th>
-                                            <th>% of Total</th>
+                                            <th>Categorie</th>
+                                            <th>Totaal Tickets</th>
+                                            <th>% van Totaal</th>
                                             <th>Open</th>
-                                            <th>In Progress</th>
-                                            <th>Resolved</th>
-                                            <th>Resolution Rate</th>
-                                            <th>Avg Resolution (Hours)</th>
-                                            <th>Avg Satisfaction</th>
+                                            <th>In Behandeling</th>
+                                            <th>Opgelost</th>
+                                            <th>Oplospercentage</th>
+                                            <th>Gem. Oplostijd (Uren)</th>
+                                            <th>Gem. Tevredenheid</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -451,125 +432,205 @@ $pageTitle = 'Reports & Analytics';
 
     <footer class="mt-5 py-3 bg-light">
         <div class="container text-center">
-            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. All rights reserved.</p>
+            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. Alle rechten voorbehouden.</p>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Ticket Volume Chart
+        // Ticket Volume Chart - ApexCharts with Kruit & Kramer Styling
         <?php if (!empty($ticketVolume)): ?>
-        const ticketVolumeCtx = document.getElementById('ticketVolumeChart').getContext('2d');
-        new Chart(ticketVolumeCtx, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode(array_column($ticketVolume, 'period')); ?>,
-                datasets: [
-                    {
-                        label: 'Total Tickets',
-                        data: <?php echo json_encode(array_column($ticketVolume, 'ticket_count')); ?>,
-                        borderColor: 'rgb(13, 110, 253)',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.1
-                    },
-                    {
-                        label: 'Open',
-                        data: <?php echo json_encode(array_column($ticketVolume, 'open_count')); ?>,
-                        borderColor: 'rgb(255, 193, 7)',
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                        tension: 0.1
-                    },
-                    {
-                        label: 'In Progress',
-                        data: <?php echo json_encode(array_column($ticketVolume, 'in_progress_count')); ?>,
-                        borderColor: 'rgb(13, 202, 240)',
-                        backgroundColor: 'rgba(13, 202, 240, 0.1)',
-                        tension: 0.1
-                    },
-                    {
-                        label: 'Resolved',
-                        data: <?php echo json_encode(array_column($ticketVolume, 'resolved_count')); ?>,
-                        borderColor: 'rgb(25, 135, 84)',
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                        tension: 0.1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: false
+        var ticketVolumeOptions = {
+            series: [
+                {
+                    name: 'Total Tickets',
+                    data: <?php echo json_encode(array_column($ticketVolume, 'ticket_count')); ?>
+                },
+                {
+                    name: 'Open',
+                    data: <?php echo json_encode(array_column($ticketVolume, 'open_count')); ?>
+                },
+                {
+                    name: 'In Progress',
+                    data: <?php echo json_encode(array_column($ticketVolume, 'in_progress_count')); ?>
+                },
+                {
+                    name: 'Resolved',
+                    data: <?php echo json_encode(array_column($ticketVolume, 'resolved_count')); ?>
+                }
+            ],
+            chart: {
+                type: 'area',
+                height: 350,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                toolbar: {
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: true,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true
                     }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800
+                }
+            },
+            colors: ['#004E89', '#FFB627', '#FF6B35', '#28a745'],
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 3
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.2,
+                    stops: [0, 90, 100]
+                }
+            },
+            xaxis: {
+                categories: <?php echo json_encode(array_column($ticketVolume, 'period')); ?>,
+                labels: {
+                    style: {
+                        fontSize: '12px'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: {
+                        fontSize: '12px'
+                    }
+                }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'left',
+                fontSize: '13px',
+                fontWeight: 500,
+                markers: {
+                    width: 12,
+                    height: 12,
+                    radius: 12
+                }
+            },
+            grid: {
+                borderColor: '#f1f1f1',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                theme: 'dark',
+                x: {
+                    show: true
+                },
+                y: {
+                    formatter: function(value) {
+                        return value + ' tickets';
                     }
                 }
             }
-        });
+        };
+
+        var ticketVolumeChart = new ApexCharts(document.querySelector("#ticketVolumeChart"), ticketVolumeOptions);
+        ticketVolumeChart.render();
         <?php endif; ?>
 
-        // Satisfaction Chart
+        // Satisfaction Chart - ApexCharts Radial Bar
         <?php if ($satisfactionMetrics && $satisfactionMetrics['total_ratings'] > 0): ?>
-        const satisfactionCtx = document.getElementById('satisfactionChart').getContext('2d');
-        new Chart(satisfactionCtx, {
-            type: 'bar',
-            data: {
-                labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
-                datasets: [{
-                    label: 'Number of Ratings',
-                    data: [
-                        <?php echo $satisfactionMetrics['rating_1_count']; ?>,
-                        <?php echo $satisfactionMetrics['rating_2_count']; ?>,
-                        <?php echo $satisfactionMetrics['rating_3_count']; ?>,
-                        <?php echo $satisfactionMetrics['rating_4_count']; ?>,
-                        <?php echo $satisfactionMetrics['rating_5_count']; ?>
-                    ],
-                    backgroundColor: [
-                        'rgba(220, 53, 69, 0.8)',
-                        'rgba(253, 126, 20, 0.8)',
-                        'rgba(255, 193, 7, 0.8)',
-                        'rgba(32, 201, 151, 0.8)',
-                        'rgba(25, 135, 84, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgb(220, 53, 69)',
-                        'rgb(253, 126, 20)',
-                        'rgb(255, 193, 7)',
-                        'rgb(32, 201, 151)',
-                        'rgb(25, 135, 84)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        var satisfactionOptions = {
+            series: [
+                <?php echo $satisfactionMetrics['rating_1_count']; ?>,
+                <?php echo $satisfactionMetrics['rating_2_count']; ?>,
+                <?php echo $satisfactionMetrics['rating_3_count']; ?>,
+                <?php echo $satisfactionMetrics['rating_4_count']; ?>,
+                <?php echo $satisfactionMetrics['rating_5_count']; ?>
+            ],
+            chart: {
+                type: 'bar',
+                height: 300,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                toolbar: {
+                    show: true
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800
+                }
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 8,
+                    distributed: true,
+                    horizontal: false,
+                    dataLabels: {
+                        position: 'top'
+                    }
+                }
+            },
+            colors: ['#dc3545', '#FF6B35', '#FFB627', '#48BB78', '#28a745'],
+            dataLabels: {
+                enabled: true,
+                formatter: function (val) {
+                    return val;
+                },
+                offsetY: -20,
+                style: {
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    colors: ['#304758']
+                }
+            },
+            xaxis: {
+                categories: ['⭐ 1 Star', '⭐⭐ 2 Stars', '⭐⭐⭐ 3 Stars', '⭐⭐⭐⭐ 4 Stars', '⭐⭐⭐⭐⭐ 5 Stars'],
+                labels: {
+                    style: {
+                        fontSize: '12px'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: {
+                        fontSize: '12px'
+                    }
+                }
+            },
+            legend: {
+                show: false
+            },
+            grid: {
+                borderColor: '#f1f1f1',
+                strokeDashArray: 4
+            },
+            tooltip: {
+                theme: 'dark',
+                y: {
+                    formatter: function(value, { seriesIndex, dataPointIndex, w }) {
+                        var total = w.globals.series.reduce((a, b) => a + b, 0);
+                        var percentage = ((value / total) * 100).toFixed(1);
+                        return value + ' ratings (' + percentage + '%)';
                     }
                 }
             }
-        });
+        };
+
+        var satisfactionChart = new ApexCharts(document.querySelector("#satisfactionChart"), satisfactionOptions);
+        satisfactionChart.render();
         <?php endif; ?>
     </script>
+            </main>
+        </div>
+    </div>
 </body>
 </html>

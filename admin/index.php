@@ -46,33 +46,38 @@ if (is_array($recentTickets) && count($recentTickets) > 10) {
 
 // Page title
 $pageTitle = 'Admin Dashboard';
-
-// Include header
-include __DIR__ . '/../includes/header.php';
 ?>
-
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo escapeOutput($pageTitle . ' - ' . SITE_NAME); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
+</head>
+<body>
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
         <?php include __DIR__ . '/../includes/sidebar.php'; ?>
         
-        <!-- Main Content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Admin Dashboard</h1>
+                <h1 class="h2"><?php _e('nav_admin'); ?> <?php _e('nav_dashboard'); ?></h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
                     <div class="btn-group me-2">
                         <a href="<?php echo SITE_URL; ?>/admin/email_tickets.php" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-envelope-fill"></i> Email Tickets
+                            <i class="bi bi-envelope-fill"></i> Email <?php _e('tickets'); ?>
                         </a>
                         <a href="<?php echo SITE_URL; ?>/admin/users.php" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-people"></i> Manage Users
+                            <i class="bi bi-people"></i> <?php _e('nav_users'); ?>
                         </a>
                         <a href="<?php echo SITE_URL; ?>/admin/categories.php" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-tags"></i> Categories
+                            <i class="bi bi-tags"></i> <?php _e('nav_categories'); ?>
                         </a>
                         <a href="<?php echo SITE_URL; ?>/admin/reports.php" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-graph-up"></i> Reports
+                            <i class="bi bi-graph-up"></i> <?php _e('nav_reports'); ?>
                         </a>
                     </div>
                 </div>
@@ -83,7 +88,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="col-md-3">
                     <div class="card text-white bg-primary mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">Total Tickets</h5>
+                            <h5 class="card-title"><?php _e('total_tickets'); ?></h5>
                             <p class="card-text display-4"><?php echo $totalTickets; ?></p>
                         </div>
                     </div>
@@ -91,7 +96,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="col-md-3">
                     <div class="card text-white bg-warning mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">Open Tickets</h5>
+                            <h5 class="card-title"><?php _e('open_tickets'); ?></h5>
                             <p class="card-text display-4"><?php echo $openTickets; ?></p>
                         </div>
                     </div>
@@ -99,7 +104,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="col-md-3">
                     <div class="card text-white bg-danger mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">Urgent Tickets</h5>
+                            <h5 class="card-title"><?php _e('urgent_tickets'); ?></h5>
                             <p class="card-text display-4"><?php echo $urgentTickets; ?></p>
                         </div>
                     </div>
@@ -107,7 +112,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="col-md-3">
                     <div class="card text-white bg-success mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">Active Users</h5>
+                            <h5 class="card-title"><?php _e('active_users'); ?></h5>
                             <p class="card-text display-4"><?php echo $activeUsers; ?></p>
                         </div>
                     </div>
@@ -117,7 +122,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Recent Tickets -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">Recent Tickets</h5>
+                    <h5 class="mb-0"><?php _e('recent_tickets'); ?></h5>
                 </div>
                 <div class="card-body">
                     <?php if ($recentTickets && count($recentTickets) > 0): ?>
@@ -126,12 +131,12 @@ include __DIR__ . '/../includes/header.php';
                                 <thead>
                                     <tr>
                                         <th>Ticket #</th>
-                                        <th>Subject</th>
-                                        <th>User</th>
-                                        <th>Priority</th>
+                                        <th>Onderwerp</th>
+                                        <th>Gebruiker</th>
+                                        <th>Prioriteit</th>
                                         <th>Status</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
+                                        <th>Aangemaakt</th>
+                                        <th>Acties</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -143,7 +148,7 @@ include __DIR__ . '/../includes/header.php';
                                                 </a>
                                             </td>
                                             <td><?php echo escapeOutput($ticket['title']); ?></td>
-                                            <td><?php echo escapeOutput(($ticket['user_first_name'] ?? '') . ' ' . ($ticket['user_last_name'] ?? 'Unknown')); ?></td>
+                                            <td><?php echo escapeOutput(($ticket['user_first_name'] ?? '') . ' ' . ($ticket['user_last_name'] ?? 'Onbekend')); ?></td>
                                             <td>
                                                 <?php
                                                 $priorityClass = [
@@ -176,7 +181,7 @@ include __DIR__ . '/../includes/header.php';
                                             <td>
                                                 <a href="<?php echo SITE_URL; ?>/agent/ticket_detail.php?id=<?php echo $ticket['ticket_id']; ?>" 
                                                    class="btn btn-sm btn-outline-primary">
-                                                    View
+                                                    Bekijken
                                                 </a>
                                             </td>
                                         </tr>
@@ -185,7 +190,7 @@ include __DIR__ . '/../includes/header.php';
                             </table>
                         </div>
                     <?php else: ?>
-                        <p class="text-muted">No tickets found.</p>
+                        <p class="text-muted">Geen tickets gevonden.</p>
                     <?php endif; ?>
                 </div>
             </div>
@@ -195,21 +200,21 @@ include __DIR__ . '/../includes/header.php';
                 <div class="col-md-6">
                     <div class="card mb-4">
                         <div class="card-header">
-                            <h5 class="mb-0">Quick Actions</h5>
+                            <h5 class="mb-0">Snelle Acties</h5>
                         </div>
                         <div class="card-body">
                             <div class="list-group">
                                 <a href="<?php echo SITE_URL; ?>/admin/users.php" class="list-group-item list-group-item-action">
-                                    <i class="bi bi-person-plus"></i> Add New User
+                                    <i class="bi bi-person-plus"></i> Nieuwe Gebruiker Toevoegen
                                 </a>
                                 <a href="<?php echo SITE_URL; ?>/admin/categories.php" class="list-group-item list-group-item-action">
-                                    <i class="bi bi-tag"></i> Manage Categories
+                                    <i class="bi bi-tag"></i> Categorieën Beheren
                                 </a>
                                 <a href="<?php echo SITE_URL; ?>/admin/knowledge_base.php" class="list-group-item list-group-item-action">
-                                    <i class="bi bi-book"></i> Manage Knowledge Base
+                                    <i class="bi bi-book"></i> Kennisbank Beheren
                                 </a>
                                 <a href="<?php echo SITE_URL; ?>/admin/reports.php" class="list-group-item list-group-item-action">
-                                    <i class="bi bi-graph-up"></i> View Reports
+                                    <i class="bi bi-graph-up"></i> Rapporten Bekijken
                                 </a>
                             </div>
                         </div>
@@ -219,20 +224,20 @@ include __DIR__ . '/../includes/header.php';
                 <div class="col-md-6">
                     <div class="card mb-4">
                         <div class="card-header">
-                            <h5 class="mb-0">System Information</h5>
+                            <h5 class="mb-0">Systeeminformatie</h5>
                         </div>
                         <div class="card-body">
                             <table class="table table-sm">
                                 <tr>
-                                    <th>Total Users:</th>
+                                    <th>Totaal Gebruikers:</th>
                                     <td><?php echo $totalUsers; ?></td>
                                 </tr>
                                 <tr>
-                                    <th>Active Users:</th>
+                                    <th>Actieve Gebruikers:</th>
                                     <td><?php echo $activeUsers; ?></td>
                                 </tr>
                                 <tr>
-                                    <th>Total Tickets:</th>
+                                    <th>Totaal Tickets:</th>
                                     <td><?php echo $totalTickets; ?></td>
                                 </tr>
                                 <tr>
@@ -240,11 +245,11 @@ include __DIR__ . '/../includes/header.php';
                                     <td><?php echo $openTickets; ?></td>
                                 </tr>
                                 <tr>
-                                    <th>Urgent Tickets:</th>
+                                    <th>Urgente Tickets:</th>
                                     <td><?php echo $urgentTickets; ?></td>
                                 </tr>
                                 <tr>
-                                    <th>PHP Version:</th>
+                                    <th>PHP Versie:</th>
                                     <td><?php echo phpversion(); ?></td>
                                 </tr>
                             </table>
@@ -256,4 +261,6 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

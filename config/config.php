@@ -11,13 +11,13 @@
 // For localhost development with port 8080, use http://localhost:8080/ticketportaal
 // For localhost default port 80, use http://localhost/ticketportaal
 // For production, use https://tickets.kruit-en-kramer.nl
-define('SITE_URL', 'http://localhost:8080/ticketportaal');
+define('SITE_URL', 'http://localhost/ticketportaal');
 
 // Site name
 define('SITE_NAME', 'ICT Ticketportaal');
 
 // Company name
-define('COMPANY_NAME', 'Kruit & Kramer');
+define('COMPANY_NAME', 'Digimaatwerk Systems');
 
 // Session timeout in seconds (30 minutes = 1800 seconds)
 define('SESSION_TIMEOUT', 1800);

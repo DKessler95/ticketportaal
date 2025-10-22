@@ -1,652 +1,307 @@
-# ICT Ticketportaal - Deployment Guide
+# Kruit & Kramer ICT Ticketportaal - Deployment Guide
 
-## Server Requirements
+## Versie Informatie
+- **Versie:** 1.0.0
+- **Datum:** 22 oktober 2025
+- **Status:** Production Ready
 
-### Minimum Requirements
+## Overzicht
+Dit document beschrijft hoe je het ICT Ticketportaal kunt deployen op verschillende omgevingen.
 
-- **PHP**: 7.4 or higher
-  - Required extensions: PDO, PDO_MySQL, mbstring, openssl, imap, fileinfo
-- **MySQL**: 5.7 or higher (or MariaDB 10.2+)
-- **Web Server**: Apache 2.4+ or Nginx 1.18+
-- **SSL Certificate**: Required for production deployment
-- **Disk Space**: Minimum 500MB (more for file uploads)
-- **Memory**: Minimum 512MB RAM
-- **Cron**: Support for scheduled tasks
+## Systeem Vereisten
 
-### Recommended PHP Extensions
+### Server Requirements
+- **PHP:** 7.4 of hoger (8.0+ aanbevolen)
+- **MySQL:** 5.7 of hoger (8.0+ aanbevolen)
+- **Webserver:** Apache 2.4+ of Nginx
+- **Disk Space:** Minimaal 500MB
+- **RAM:** Minimaal 512MB (1GB+ aanbevolen)
 
-```bash
-php-pdo
-php-mysql
-php-mbstring
-php-openssl
-php-imap
-php-fileinfo
-php-curl
-php-json
-php-xml
-```
+### PHP Extensions
+- mysqli
+- pdo_mysql
+- mbstring
+- json
+- session
+- fileinfo
+- gd (voor image handling)
 
-## Installation Steps
+## Installatie Stappen
 
-### 1. Prepare the Server
+### 1. Database Setup
 
-#### For Ubuntu/Debian:
-
-```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
-
-# Install Apache
-sudo apt install apache2 -y
-
-# Install PHP and required extensions
-sudo apt install php php-pdo php-mysql php-mbstring php-openssl php-imap php-fileinfo php-curl php-json php-xml -y
-
-# Install MySQL
-sudo apt install mysql-server -y
-
-# Enable Apache modules
-sudo a2enmod rewrite
-sudo a2enmod ssl
-sudo systemctl restart apache2
-```
-
-#### For CentOS/RHEL:
-
-```bash
-# Update system packages
-sudo yum update -y
-
-# Install Apache
-sudo yum install httpd -y
-
-# Install PHP and required extensions
-sudo yum install php php-pdo php-mysqlnd php-mbstring php-openssl php-imap php-fileinfo php-curl php-json php-xml -y
-
-# Install MySQL
-sudo yum install mysql-server -y
-
-# Start services
-sudo systemctl start httpd
-sudo systemctl start mysqld
-sudo systemctl enable httpd
-sudo systemctl enable mysqld
-```
-
-### 2. Clone or Upload Application Files
-
-```bash
-# Navigate to web root
-cd /var/www/html
-
-# Clone repository (if using Git)
-sudo git clone <repository-url> ticketportaal
-
-# Or upload files via FTP/SFTP to /var/www/html/ticketportaal
-
-# Set proper ownership
-sudo chown -R www-data:www-data ticketportaal
-# For CentOS/RHEL use: sudo chown -R apache:apache ticketportaal
-```
-
-### 3. Configure File Permissions
-
-```bash
-cd /var/www/html/ticketportaal
-
-# Set directory permissions
-sudo find . -type d -exec chmod 755 {} \;
-
-# Set file permissions
-sudo find . -type f -exec chmod 644 {} \;
-
-# Make uploads directory writable
-sudo chmod 775 uploads/
-sudo chmod 775 uploads/tickets/
-
-# Make logs directory writable
-sudo chmod 775 logs/
-
-# Protect sensitive directories
-sudo chmod 700 config/
-sudo chmod 700 classes/
-```
-
-### 4. Create MySQL Database
-
-```bash
-# Login to MySQL
-sudo mysql -u root -p
-
-# Create database and user
+#### Stap 1: Database Aanmaken
+```sql
 CREATE DATABASE ticketportaal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'ticketuser'@'localhost' IDENTIFIED BY 'your_secure_password_here';
-GRANT ALL PRIVILEGES ON ticketportaal.* TO 'ticketuser'@'localhost';
+CREATE USER 'ticketportaal_user'@'localhost' IDENTIFIED BY 'jouw_wachtwoord';
+GRANT ALL PRIVILEGES ON ticketportaal.* TO 'ticketportaal_user'@'localhost';
 FLUSH PRIVILEGES;
-EXIT;
 ```
 
-### 5. Import Database Schema
+#### Stap 2: Database Schema Importeren
+Voer de volgende SQL bestanden uit in deze volgorde:
+1. `database/schema.sql` - Basis tabellen
+2. `database/migrations/add_location_to_users.sql` - Locatie veld
+3. `database/migrations/create_change_requests_table.sql` - Change management
+4. `database/migrations/add_sales_facilitair_departments.sql` - Extra afdelingen
+5. `database/migrations/add_default_templates.sql` - Sjablonen
 
+### 2. Configuratie
+
+#### Stap 1: Database Configuratie
+Kopieer en pas aan:
 ```bash
-# Import schema
-mysql -u ticketuser -p ticketportaal < database/schema.sql
-
-# Import seed data (optional - includes default categories and admin user)
-mysql -u ticketuser -p ticketportaal < database/seed.sql
-```
-
-### 6. Configure Application
-
-```bash
-# Copy example configuration files
 cp config/database.example.php config/database.php
-cp config/email.example.php config/email.php
-
-# Edit configuration files with your settings
-nano config/database.php
-nano config/email.php
-nano config/config.php
 ```
 
-**Important**: Update the following in each config file:
-- Database credentials in `config/database.php`
-- Email server settings in `config/email.php`
-- Site URL and paths in `config/config.php`
+Bewerk `config/database.php`:
+```php
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'ticketportaal');
+define('DB_USER', 'ticketportaal_user');
+define('DB_PASS', 'jouw_wachtwoord');
+define('DB_CHARSET', 'utf8mb4');
+```
 
-### 7. Configure Web Server
+#### Stap 2: Applicatie Configuratie
+Bewerk `config/config.php`:
+```php
+// Site URL (zonder trailing slash)
+define('SITE_URL', 'http://jouw-domein.nl/ticketportaal');
 
-#### Apache Configuration
+// Site naam
+define('SITE_NAME', 'Kruit & Kramer Ticketportaal');
 
-Create a virtual host configuration:
+// Debug mode (zet op false in productie!)
+define('DEBUG_MODE', false);
+
+// Upload directory
+define('UPLOAD_DIR', __DIR__ . '/../uploads');
+define('MAX_FILE_SIZE', 10485760); // 10MB
+```
+
+#### Stap 3: Email Configuratie (optioneel)
+Bewerk `config/email.php`:
+```php
+define('SMTP_HOST', 'smtp.jouw-provider.nl');
+define('SMTP_PORT', 587);
+define('SMTP_USERNAME', 'noreply@kruitkramer.nl');
+define('SMTP_PASSWORD', 'jouw_smtp_wachtwoord');
+define('SMTP_FROM_EMAIL', 'noreply@kruitkramer.nl');
+define('SMTP_FROM_NAME', 'Kruit & Kramer ICT');
+```
+
+### 3. Bestandspermissies
 
 ```bash
-sudo nano /etc/apache2/sites-available/ticketportaal.conf
+# Maak upload directory aan
+mkdir -p uploads
+chmod 755 uploads
+
+# Maak logs directory aan
+mkdir -p logs
+chmod 755 logs
+
+# Zorg dat webserver kan schrijven
+chown -R www-data:www-data uploads logs
 ```
 
-Add the following configuration:
+### 4. Apache Configuratie
 
+#### .htaccess (al aanwezig in project)
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+
+# Security headers
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-Content-Type-Options "nosniff"
+Header set X-XSS-Protection "1; mode=block"
+```
+
+#### Virtual Host Voorbeeld
 ```apache
 <VirtualHost *:80>
-    ServerName tickets.kruit-en-kramer.nl
-    ServerAdmin admin@kruit-en-kramer.nl
-    DocumentRoot /var/www/html/ticketportaal
-
-    <Directory /var/www/html/ticketportaal>
+    ServerName ticketportaal.kruitkramer.nl
+    DocumentRoot /var/www/ticketportaal
+    
+    <Directory /var/www/ticketportaal>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
     </Directory>
-
-    # Protect sensitive directories
-    <Directory /var/www/html/ticketportaal/config>
-        Require all denied
-    </Directory>
-
-    <Directory /var/www/html/ticketportaal/classes>
-        Require all denied
-    </Directory>
-
-    <Directory /var/www/html/ticketportaal/logs>
-        Require all denied
-    </Directory>
-
-    ErrorLog ${APACHE_LOG_DIR}/ticketportaal_error.log
-    CustomLog ${APACHE_LOG_DIR}/ticketportaal_access.log combined
-
-    # Redirect to HTTPS (after SSL is configured)
-    # RewriteEngine On
-    # RewriteCond %{HTTPS} off
-    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    ErrorLog ${APACHE_LOG_DIR}/ticketportaal-error.log
+    CustomLog ${APACHE_LOG_DIR}/ticketportaal-access.log combined
 </VirtualHost>
 ```
 
-Enable the site:
+### 5. Eerste Admin Account
 
+Na installatie, log in met:
+- **Email:** admin@kruitkramer.nl
+- **Wachtwoord:** admin123
+
+**BELANGRIJK:** Wijzig dit wachtwoord direct na eerste login!
+
+## Backup Procedures
+
+### Database Backup
 ```bash
-sudo a2ensite ticketportaal.conf
-sudo systemctl reload apache2
+# Handmatige backup
+mysqldump -u ticketportaal_user -p ticketportaal > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Geautomatiseerde dagelijkse backup (cron)
+0 2 * * * mysqldump -u ticketportaal_user -p'wachtwoord' ticketportaal > /backups/ticketportaal_$(date +\%Y\%m\%d).sql
 ```
 
-#### Nginx Configuration
-
-Create a server block:
-
+### Bestanden Backup
 ```bash
-sudo nano /etc/nginx/sites-available/ticketportaal
+# Backup uploads en configuratie
+tar -czf backup_files_$(date +%Y%m%d_%H%M%S).tar.gz uploads/ config/ logs/
 ```
 
-Add the following configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name tickets.kruit-en-kramer.nl;
-    root /var/www/html/ticketportaal;
-    index index.php index.html;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-
-    # Disable directory listing
-    autoindex off;
-
-    # Main location
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    # PHP processing
-    location ~ \.php$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    # Protect sensitive directories
-    location ~ ^/(config|classes|logs|database)/ {
-        deny all;
-        return 404;
-    }
-
-    # Deny access to .htaccess files
-    location ~ /\.ht {
-        deny all;
-    }
-
-    # Redirect to HTTPS (after SSL is configured)
-    # return 301 https://$server_name$request_uri;
-}
-```
-
-Enable the site:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/ticketportaal /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-## SSL Certificate Configuration
-
-### Option 1: Let's Encrypt (Free SSL Certificate)
-
-```bash
-# Install Certbot
-sudo apt install certbot python3-certbot-apache -y
-# For Nginx: sudo apt install certbot python3-certbot-nginx -y
-
-# Obtain and install certificate
-sudo certbot --apache -d tickets.kruit-en-kramer.nl
-# For Nginx: sudo certbot --nginx -d tickets.kruit-en-kramer.nl
-
-# Test automatic renewal
-sudo certbot renew --dry-run
-```
-
-### Option 2: Commercial SSL Certificate
-
-1. Generate a Certificate Signing Request (CSR):
-
-```bash
-sudo openssl req -new -newkey rsa:2048 -nodes \
-  -keyout /etc/ssl/private/ticketportaal.key \
-  -out /etc/ssl/certs/ticketportaal.csr
-```
-
-2. Submit the CSR to your certificate authority
-3. Download the certificate files
-4. Install the certificate:
-
-#### Apache SSL Configuration:
-
-```bash
-sudo nano /etc/apache2/sites-available/ticketportaal-ssl.conf
-```
-
-```apache
-<VirtualHost *:443>
-    ServerName tickets.kruit-en-kramer.nl
-    ServerAdmin admin@kruit-en-kramer.nl
-    DocumentRoot /var/www/html/ticketportaal
-
-    SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/ticketportaal.crt
-    SSLCertificateKeyFile /etc/ssl/private/ticketportaal.key
-    SSLCertificateChainFile /etc/ssl/certs/ticketportaal-chain.crt
-
-    <Directory /var/www/html/ticketportaal>
-        Options -Indexes +FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    # Protect sensitive directories
-    <Directory /var/www/html/ticketportaal/config>
-        Require all denied
-    </Directory>
-
-    <Directory /var/www/html/ticketportaal/classes>
-        Require all denied
-    </Directory>
-
-    <Directory /var/www/html/ticketportaal/logs>
-        Require all denied
-    </Directory>
-
-    ErrorLog ${APACHE_LOG_DIR}/ticketportaal_ssl_error.log
-    CustomLog ${APACHE_LOG_DIR}/ticketportaal_ssl_access.log combined
-</VirtualHost>
-```
-
-```bash
-sudo a2ensite ticketportaal-ssl.conf
-sudo systemctl reload apache2
-```
-
-#### Nginx SSL Configuration:
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name tickets.kruit-en-kramer.nl;
-    root /var/www/html/ticketportaal;
-    index index.php index.html;
-
-    # SSL Configuration
-    ssl_certificate /etc/ssl/certs/ticketportaal.crt;
-    ssl_certificate_key /etc/ssl/private/ticketportaal.key;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-
-    # Rest of configuration same as HTTP block...
-}
-```
-
-## Cron Job Setup for Email Processing
-
-The system requires a cron job to process incoming emails and convert them to tickets.
-
-### Configure Cron Job
-
-```bash
-# Edit crontab for web server user
-sudo crontab -u www-data -e
-# For CentOS/RHEL: sudo crontab -u apache -e
-```
-
-Add the following line to run the email processor every 5 minutes:
-
-```cron
-*/5 * * * * /usr/bin/php /var/www/html/ticketportaal/email_to_ticket.php >> /var/www/html/ticketportaal/logs/cron.log 2>&1
-```
-
-### Verify Cron Job
-
-```bash
-# List cron jobs
-sudo crontab -u www-data -l
-
-# Monitor cron log
-tail -f /var/www/html/ticketportaal/logs/cron.log
-```
-
-### Email Configuration Requirements
-
-Ensure the following in `config/email.php`:
-- IMAP access enabled for ict@kruit-en-kramer.nl
-- Correct IMAP server settings (host, port, username, password)
-- SMTP settings for sending emails
-
-### Test Email Processing
-
-```bash
-# Run manually to test
-sudo -u www-data php /var/www/html/ticketportaal/email_to_ticket.php
-
-# Check for errors
-cat /var/www/html/ticketportaal/logs/cron.log
-```
-
-## Post-Installation Steps
-
-### 1. Test the Installation
-
-1. Access the application: `https://tickets.kruit-en-kramer.nl`
-2. Test user registration
-3. Login with default admin account (if seed data was imported):
-   - Email: admin@kruit-en-kramer.nl
-   - Password: (check seed.sql file)
-4. Create a test ticket
-5. Test email notifications
-6. Verify file uploads work
-
-### 2. Security Hardening
-
-```bash
-# Disable PHP information disclosure
-sudo nano /etc/php/7.4/apache2/php.ini
-# Set: expose_php = Off
-
-# Set secure session settings (should already be in config/session.php)
-# session.cookie_httponly = 1
-# session.cookie_secure = 1
-# session.use_strict_mode = 1
-
-# Restart web server
-sudo systemctl restart apache2
-# For Nginx: sudo systemctl restart php7.4-fpm
-```
-
-### 3. Configure Backups
-
-```bash
-# Create backup script
-sudo nano /usr/local/bin/backup-ticketportaal.sh
-```
-
+### Volledige Backup Script
+Maak `backup.sh`:
 ```bash
 #!/bin/bash
-BACKUP_DIR="/var/backups/ticketportaal"
+BACKUP_DIR="/backups/ticketportaal"
 DATE=$(date +%Y%m%d_%H%M%S)
 
-# Create backup directory
-mkdir -p $BACKUP_DIR
+# Database backup
+mysqldump -u ticketportaal_user -p'wachtwoord' ticketportaal > $BACKUP_DIR/db_$DATE.sql
 
-# Backup database
-mysqldump -u ticketuser -p'your_password' ticketportaal > $BACKUP_DIR/db_$DATE.sql
+# Files backup
+tar -czf $BACKUP_DIR/files_$DATE.tar.gz uploads/ config/ logs/
 
-# Backup uploads
-tar -czf $BACKUP_DIR/uploads_$DATE.tar.gz /var/www/html/ticketportaal/uploads/
+# Verwijder backups ouder dan 30 dagen
+find $BACKUP_DIR -name "*.sql" -mtime +30 -delete
+find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
 
-# Remove backups older than 30 days
-find $BACKUP_DIR -type f -mtime +30 -delete
+echo "Backup completed: $DATE"
 ```
 
+## Restore Procedures
+
+### Database Restore
 ```bash
-# Make executable
-sudo chmod +x /usr/local/bin/backup-ticketportaal.sh
-
-# Add to crontab (daily at 2 AM)
-sudo crontab -e
-# Add: 0 2 * * * /usr/local/bin/backup-ticketportaal.sh
+mysql -u ticketportaal_user -p ticketportaal < backup_20251022_120000.sql
 ```
 
-### 4. Configure Monitoring
+### Bestanden Restore
+```bash
+tar -xzf backup_files_20251022_120000.tar.gz
+```
 
-Set up monitoring for:
-- Web server uptime
-- Database connectivity
-- Disk space usage
-- Email processing errors
-- Application error logs
+## Security Checklist
 
-### 5. Change Default Credentials
-
-**IMPORTANT**: If you imported seed data, change the default admin password immediately:
-
-1. Login as admin
-2. Navigate to profile settings
-3. Change password to a strong, unique password
+- [ ] Debug mode uitgeschakeld (`DEBUG_MODE = false`)
+- [ ] Sterke database wachtwoorden
+- [ ] Admin wachtwoord gewijzigd
+- [ ] HTTPS ingeschakeld (SSL certificaat)
+- [ ] Bestandspermissies correct ingesteld
+- [ ] Upload directory beveiligd
+- [ ] Security headers ingeschakeld
+- [ ] PHP error display uitgeschakeld in productie
+- [ ] Database gebruiker heeft alleen benodigde rechten
+- [ ] Backup procedures getest
 
 ## Troubleshooting
 
-### Common Issues
+### Probleem: Witte pagina / 500 Error
+**Oplossing:**
+1. Check Apache error log: `tail -f /var/log/apache2/error.log`
+2. Controleer PHP error log: `tail -f /var/log/php/error.log`
+3. Zet tijdelijk `DEBUG_MODE = true` in config.php
+4. Controleer bestandspermissies
 
-#### 1. Database Connection Errors
+### Probleem: Database connectie mislukt
+**Oplossing:**
+1. Controleer database credentials in `config/database.php`
+2. Test database connectie: `mysql -u ticketportaal_user -p`
+3. Controleer of MySQL service draait: `systemctl status mysql`
 
-```bash
-# Check MySQL is running
-sudo systemctl status mysql
+### Probleem: Uploads werken niet
+**Oplossing:**
+1. Controleer of `uploads/` directory bestaat
+2. Controleer permissies: `chmod 755 uploads`
+3. Controleer ownership: `chown www-data:www-data uploads`
+4. Controleer `MAX_FILE_SIZE` in config.php
+5. Controleer PHP `upload_max_filesize` en `post_max_size`
 
-# Verify credentials
-mysql -u ticketuser -p ticketportaal
+### Probleem: Emails worden niet verzonden
+**Oplossing:**
+1. Controleer SMTP configuratie in `config/email.php`
+2. Test SMTP connectie met telnet: `telnet smtp.provider.nl 587`
+3. Controleer firewall regels voor uitgaande SMTP
+4. Check logs in `logs/` directory
 
-# Check config/database.php settings
+## Monitoring
+
+### Log Bestanden
+- **Application logs:** `logs/app.log`
+- **Error logs:** `logs/error.log`
+- **Apache access:** `/var/log/apache2/access.log`
+- **Apache error:** `/var/log/apache2/error.log`
+
+### Health Check Endpoints
+- **Homepage:** `http://jouw-domein.nl/ticketportaal/`
+- **Login:** `http://jouw-domein.nl/ticketportaal/login.php`
+- **Database:** Check via admin dashboard
+
+## Updates en Maintenance
+
+### Update Procedure
+1. Maak volledige backup (database + bestanden)
+2. Zet applicatie in maintenance mode
+3. Pull nieuwe code van GitHub
+4. Voer nieuwe database migraties uit
+5. Clear cache indien aanwezig
+6. Test functionaliteit
+7. Haal maintenance mode weg
+
+### Maintenance Mode
+Maak `maintenance.php` in root:
+```php
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Onderhoud - Kruit & Kramer</title>
+</head>
+<body>
+    <h1>Systeem Onderhoud</h1>
+    <p>Het ticketportaal is tijdelijk niet beschikbaar wegens onderhoud.</p>
+    <p>Voor dringende zaken: bel 777 (ICT afdeling intern)</p>
+</body>
+</html>
 ```
 
-#### 2. File Upload Errors
-
-```bash
-# Check directory permissions
-ls -la /var/www/html/ticketportaal/uploads/
-
-# Verify PHP upload settings
-php -i | grep upload
-
-# Check php.ini settings:
-# upload_max_filesize = 10M
-# post_max_size = 12M
+Redirect in `.htaccess`:
+```apache
+# Uncomment voor maintenance mode
+# RewriteCond %{REQUEST_URI} !^/maintenance\.php$
+# RewriteRule ^(.*)$ /maintenance.php [R=503,L]
 ```
 
-#### 3. Email Not Sending
+## Contact en Support
 
-```bash
-# Check email configuration
-cat config/email.php
+**ICT Afdeling Kruit & Kramer**
+- **Telefoon:** 777 (intern)
+- **Email:** support@kruitkramer.nl
+- **Ontwikkelaar:** Damian Kessler
 
-# Test SMTP connection
-telnet mail.kruit-en-kramer.nl 587
+## Changelog
 
-# Check PHP mail logs
-tail -f /var/log/mail.log
-```
-
-#### 4. Cron Job Not Running
-
-```bash
-# Check cron service
-sudo systemctl status cron
-
-# Verify crontab entry
-sudo crontab -u www-data -l
-
-# Check cron log
-tail -f /var/www/html/ticketportaal/logs/cron.log
-
-# Test manual execution
-sudo -u www-data php /var/www/html/ticketportaal/email_to_ticket.php
-```
-
-#### 5. Permission Denied Errors
-
-```bash
-# Fix ownership
-sudo chown -R www-data:www-data /var/www/html/ticketportaal
-
-# Fix permissions
-sudo chmod 775 /var/www/html/ticketportaal/uploads/
-sudo chmod 775 /var/www/html/ticketportaal/logs/
-```
-
-## Maintenance
-
-### Regular Maintenance Tasks
-
-1. **Weekly**:
-   - Review error logs
-   - Check disk space usage
-   - Verify backups are running
-
-2. **Monthly**:
-   - Update system packages
-   - Review security patches
-   - Clean up old log files
-   - Optimize database tables
-
-3. **Quarterly**:
-   - Review user accounts
-   - Audit security settings
-   - Test backup restoration
-   - Review performance metrics
-
-### Log Files
-
-- Application errors: `/var/www/html/ticketportaal/logs/app.log`
-- Cron job output: `/var/www/html/ticketportaal/logs/cron.log`
-- Apache errors: `/var/log/apache2/ticketportaal_error.log`
-- Nginx errors: `/var/log/nginx/error.log`
-
-### Database Maintenance
-
-```bash
-# Optimize tables
-mysql -u ticketuser -p ticketportaal -e "OPTIMIZE TABLE tickets, users, ticket_comments, ticket_attachments, knowledge_base;"
-
-# Check table integrity
-mysql -u ticketuser -p ticketportaal -e "CHECK TABLE tickets, users;"
-```
-
-## Upgrading
-
-### Application Updates
-
-```bash
-# Backup current installation
-sudo cp -r /var/www/html/ticketportaal /var/www/html/ticketportaal.backup
-
-# Pull latest changes (if using Git)
-cd /var/www/html/ticketportaal
-sudo git pull origin main
-
-# Run any database migrations
-mysql -u ticketuser -p ticketportaal < database/migrations/update_xxx.sql
-
-# Clear any caches
-sudo rm -rf /var/www/html/ticketportaal/cache/*
-
-# Restart web server
-sudo systemctl restart apache2
-```
-
-## Support
-
-For technical support or questions:
-- Email: admin@kruit-en-kramer.nl
-- Documentation: See README.md and inline code comments
-
-## Security Considerations
-
-- Keep PHP and MySQL updated
-- Regularly review access logs
-- Monitor for suspicious activity
-- Use strong passwords
-- Enable two-factor authentication (future enhancement)
-- Regular security audits
-- Keep SSL certificates up to date
-
----
-
-**Last Updated**: January 2025
-**Version**: 1.0
+### Versie 1.0.0 (22 oktober 2025)
+- Initiële productie release
+- Ticket management systeem
+- Knowledge Base
+- CI Management
+- Change Management
+- Dynamic category fields
+- Template systeem met placeholders
+- Multi-locatie support met logo switching
+- User departments en profiles
+- Email notificaties

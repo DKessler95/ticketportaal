@@ -19,6 +19,9 @@ $userName = $_SESSION['full_name'];
 // Initialize User class
 $userClass = new User();
 
+// Initialize Database
+$db = Database::getInstance();
+
 // Handle form submissions
 $successMessage = '';
 $errorMessage = '';
@@ -36,14 +39,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $password = $_POST['password'] ?? '';
                 $firstName = trim($_POST['first_name'] ?? '');
                 $lastName = trim($_POST['last_name'] ?? '');
-                $department = trim($_POST['department'] ?? '');
+                $departmentId = !empty($_POST['department_id']) ? (int)$_POST['department_id'] : null;
+                $location = $_POST['location'] ?? 'Kruit en Kramer';
                 $role = $_POST['role'] ?? 'user';
                 
                 if (empty($email) || empty($password) || empty($firstName) || empty($lastName)) {
                     $errorMessage = 'Email, password, first name, and last name are required.';
                 } else {
-                    $newUserId = $userClass->createUser($email, $password, $firstName, $lastName, $department, $role);
+                    $newUserId = $userClass->createUser($email, $password, $firstName, $lastName, $departmentId, $role);
                     if ($newUserId) {
+                        // Update location separately
+                        $db->execute("UPDATE users SET location = ? WHERE user_id = ?", [$location, $newUserId]);
                         $successMessage = 'User created successfully!';
                     } else {
                         $errorMessage = 'Failed to create user: ' . $userClass->getError();
@@ -54,9 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'update_role':
                 $targetUserId = (int)($_POST['user_id'] ?? 0);
                 $newRole = $_POST['role'] ?? '';
+                $departmentId = !empty($_POST['department_id']) ? (int)$_POST['department_id'] : null;
+                $location = $_POST['location'] ?? 'Kruit en Kramer';
                 
+                // Update role
                 if ($userClass->updateUserRole($targetUserId, $newRole, $userId)) {
-                    $successMessage = 'User role updated successfully!';
+                    // Also update department and location
+                    $db = Database::getInstance();
+                    $db->execute("UPDATE users SET department_id = ?, location = ? WHERE user_id = ?", [$departmentId, $location, $targetUserId]);
+                    
+                    $successMessage = 'User role, department and location updated successfully!';
                 } else {
                     $errorMessage = 'Failed to update user role: ' . $userClass->getError();
                 }
@@ -83,8 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get all users
+// Get all users with location
 $users = $userClass->getAllUsers();
+
+// Get all departments
+$db = Database::getInstance();
+$departments = $db->fetchAll("SELECT * FROM departments WHERE is_active = 1 ORDER BY name ASC");
 
 $pageTitle = 'User Management';
 ?>
@@ -99,59 +116,14 @@ $pageTitle = 'User Management';
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo SITE_URL; ?>/admin/index.php">
-                <i class="bi bi-ticket-perforated"></i> <?php echo escapeOutput(SITE_NAME); ?>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/index.php">
-                            <i class="bi bi-house-door"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="<?php echo SITE_URL; ?>/admin/users.php">
-                            <i class="bi bi-people"></i> Users
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/categories.php">
-                            <i class="bi bi-tags"></i> Categories
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/admin/knowledge_base.php">
-                            <i class="bi bi-book"></i> Knowledge Base
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?php echo escapeOutput($userName); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout.php">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-12">
-                <h1 class="mb-4"><i class="bi bi-people"></i> User Management</h1>
-            </div>
-        </div>
+            <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"><i class="bi bi-people"></i> Gebruikersbeheer</h1>
+                </div>
 
         <?php if ($successMessage): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -172,7 +144,7 @@ $pageTitle = 'User Management';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Create New User</h5>
+                        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Nieuwe Gebruiker Aanmaken</h5>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="">
@@ -181,45 +153,66 @@ $pageTitle = 'User Management';
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                    <label for="email" class="form-label">E-mail <span class="text-danger">*</span></label>
                                     <input type="email" class="form-control" id="email" name="email" required maxlength="255">
                                 </div>
                                 
                                 <div class="col-md-6 mb-3">
-                                    <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+                                    <label for="password" class="form-label">Wachtwoord <span class="text-danger">*</span></label>
                                     <input type="password" class="form-control" id="password" name="password" required minlength="8">
-                                    <small class="form-text text-muted">Minimum 8 characters, must contain letters and numbers</small>
+                                    <small class="form-text text-muted">Minimaal 8 tekens, moet letters en cijfers bevatten</small>
                                 </div>
                             </div>
                             
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <label for="first_name" class="form-label">Voornaam <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="first_name" name="first_name" required maxlength="100">
                                 </div>
                                 
                                 <div class="col-md-4 mb-3">
-                                    <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                    <label for="last_name" class="form-label">Achternaam <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="last_name" name="last_name" required maxlength="100">
                                 </div>
                                 
                                 <div class="col-md-4 mb-3">
-                                    <label for="department" class="form-label">Department</label>
-                                    <input type="text" class="form-control" id="department" name="department" maxlength="100">
+                                    <label for="department_id" class="form-label">Afdeling</label>
+                                    <select class="form-select" id="department_id" name="department_id">
+                                        <option value="">-- Selecteer afdeling --</option>
+                                        <?php foreach ($departments as $dept): ?>
+                                            <option value="<?php echo $dept['department_id']; ?>">
+                                                <?php echo escapeOutput($dept['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="location" class="form-label">Locatie</label>
+                                    <select class="form-select" id="location" name="location">
+                                        <option value="Kruit en Kramer">Kruit en Kramer</option>
+                                        <option value="Pronto">Pronto</option>
+                                        <option value="Profijt Groningen">Profijt Groningen</option>
+                                        <option value="Profijt Hoogeveen">Profijt Hoogeveen</option>
+                                        <option value="Profijt Assen">Profijt Assen</option>
+                                        <option value="Henders & Hazel Assen">Henders & Hazel Assen</option>
+                                    </select>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                                <label for="role" class="form-label">Rol <span class="text-danger">*</span></label>
                                 <select class="form-select" id="role" name="role" required>
-                                    <option value="user" selected>User</option>
+                                    <option value="user" selected>Gebruiker</option>
                                     <option value="agent">Agent</option>
-                                    <option value="admin">Admin</option>
+                                    <option value="admin">Beheerder</option>
                                 </select>
                             </div>
                             
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Create User
+                                <i class="bi bi-plus-circle"></i> Gebruiker Aanmaken
                             </button>
                         </form>
                     </div>
@@ -232,25 +225,26 @@ $pageTitle = 'User Management';
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-list-ul"></i> All Users</h5>
+                        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Alle Gebruikers</h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($users)): ?>
                             <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> No users found.
+                                <i class="bi bi-info-circle"></i> Geen gebruikers gevonden.
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Department</th>
-                                            <th>Role</th>
-                                            <th>Last Login</th>
+                                            <th>Naam</th>
+                                            <th>E-mail</th>
+                                            <th>Afdeling</th>
+                                            <th>Locatie</th>
+                                            <th>Rol</th>
+                                            <th>Laatste Login</th>
                                             <th>Status</th>
-                                            <th>Actions</th>
+                                            <th>Acties</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -259,26 +253,27 @@ $pageTitle = 'User Management';
                                                 <td>
                                                     <strong><?php echo escapeOutput($user['first_name'] . ' ' . $user['last_name']); ?></strong>
                                                     <?php if ($user['user_id'] == $userId): ?>
-                                                        <span class="badge bg-info">You</span>
+                                                        <span class="badge bg-info">Jij</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td><?php echo escapeOutput($user['email']); ?></td>
-                                                <td><?php echo escapeOutput($user['department'] ?? '-'); ?></td>
+                                                <td><?php echo escapeOutput($user['department_name'] ?? '-'); ?></td>
+                                                <td><?php echo escapeOutput($user['location'] ?? 'Kruit en Kramer'); ?></td>
                                                 <td><?php echo getRoleBadge($user['role']); ?></td>
                                                 <td>
                                                     <?php 
                                                     if ($user['last_login']) {
                                                         echo escapeOutput(date('d-m-Y H:i', strtotime($user['last_login'])));
                                                     } else {
-                                                        echo '<span class="text-muted">Never</span>';
+                                                        echo '<span class="text-muted">Nooit</span>';
                                                     }
                                                     ?>
                                                 </td>
                                                 <td>
                                                     <?php if ($user['is_active']): ?>
-                                                        <span class="badge bg-success">Active</span>
+                                                        <span class="badge bg-success">Actief</span>
                                                     <?php else: ?>
-                                                        <span class="badge bg-secondary">Inactive</span>
+                                                        <span class="badge bg-secondary">Inactief</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
@@ -286,17 +281,17 @@ $pageTitle = 'User Management';
                                                         <button type="button" class="btn btn-sm btn-outline-primary" 
                                                                 data-bs-toggle="modal" 
                                                                 data-bs-target="#editModal<?php echo $user['user_id']; ?>">
-                                                            <i class="bi bi-pencil"></i> Edit Role
+                                                            <i class="bi bi-pencil"></i> Bewerken
                                                         </button>
                                                         
                                                         <?php if ($user['is_active']): ?>
                                                             <form method="POST" style="display: inline;" 
-                                                                  onsubmit="return confirm('Are you sure you want to deactivate this user?');">
+                                                                  onsubmit="return confirm('Weet je zeker dat je deze gebruiker wilt deactiveren?');">
                                                                 <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                                                                 <input type="hidden" name="action" value="deactivate">
                                                                 <input type="hidden" name="user_id" value="<?php echo $user['user_id']; ?>">
                                                                 <button type="submit" class="btn btn-sm btn-outline-warning">
-                                                                    <i class="bi bi-x-circle"></i> Deactivate
+                                                                    <i class="bi bi-x-circle"></i> Deactiveren
                                                                 </button>
                                                             </form>
                                                         <?php else: ?>
@@ -305,7 +300,7 @@ $pageTitle = 'User Management';
                                                                 <input type="hidden" name="action" value="reactivate">
                                                                 <input type="hidden" name="user_id" value="<?php echo $user['user_id']; ?>">
                                                                 <button type="submit" class="btn btn-sm btn-outline-success">
-                                                                    <i class="bi bi-check-circle"></i> Reactivate
+                                                                    <i class="bi bi-check-circle"></i> Reactiveren
                                                                 </button>
                                                             </form>
                                                         <?php endif; ?>
@@ -321,7 +316,7 @@ $pageTitle = 'User Management';
                                                     <div class="modal-dialog">
                                                         <div class="modal-content">
                                                             <div class="modal-header">
-                                                                <h5 class="modal-title">Edit User Role</h5>
+                                                                <h5 class="modal-title">Gebruikersrol & Afdeling Bewerken</h5>
                                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                             </div>
                                                             <form method="POST">
@@ -330,22 +325,47 @@ $pageTitle = 'User Management';
                                                                     <input type="hidden" name="action" value="update_role">
                                                                     <input type="hidden" name="user_id" value="<?php echo $user['user_id']; ?>">
                                                                     
-                                                                    <p><strong>User:</strong> <?php echo escapeOutput($user['first_name'] . ' ' . $user['last_name']); ?></p>
-                                                                    <p><strong>Email:</strong> <?php echo escapeOutput($user['email']); ?></p>
+                                                                    <p><strong>Gebruiker:</strong> <?php echo escapeOutput($user['first_name'] . ' ' . $user['last_name']); ?></p>
+                                                                    <p><strong>E-mail:</strong> <?php echo escapeOutput($user['email']); ?></p>
                                                                     
                                                                     <div class="mb-3">
-                                                                        <label class="form-label">Role <span class="text-danger">*</span></label>
+                                                                        <label class="form-label">Rol <span class="text-danger">*</span></label>
                                                                         <select class="form-select" name="role" required>
-                                                                            <option value="user" <?php echo $user['role'] === 'user' ? 'selected' : ''; ?>>User</option>
+                                                                            <option value="user" <?php echo $user['role'] === 'user' ? 'selected' : ''; ?>>Gebruiker</option>
                                                                             <option value="agent" <?php echo $user['role'] === 'agent' ? 'selected' : ''; ?>>Agent</option>
-                                                                            <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
+                                                                            <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Beheerder</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label">Afdeling</label>
+                                                                        <select class="form-select" name="department_id">
+                                                                            <option value="">-- Selecteer afdeling --</option>
+                                                                            <?php foreach ($departments as $dept): ?>
+                                                                                <option value="<?php echo $dept['department_id']; ?>" 
+                                                                                    <?php echo $user['department_id'] == $dept['department_id'] ? 'selected' : ''; ?>>
+                                                                                    <?php echo escapeOutput($dept['name']); ?>
+                                                                                </option>
+                                                                            <?php endforeach; ?>
+                                                                        </select>
+                                                                    </div>
+                                                                    
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label">Locatie</label>
+                                                                        <select class="form-select" name="location">
+                                                                            <option value="Kruit en Kramer" <?php echo ($user['location'] ?? 'Kruit en Kramer') === 'Kruit en Kramer' ? 'selected' : ''; ?>>Kruit en Kramer</option>
+                                                                            <option value="Pronto" <?php echo ($user['location'] ?? '') === 'Pronto' ? 'selected' : ''; ?>>Pronto</option>
+                                                                            <option value="Profijt Groningen" <?php echo ($user['location'] ?? '') === 'Profijt Groningen' ? 'selected' : ''; ?>>Profijt Groningen</option>
+                                                                            <option value="Profijt Hoogeveen" <?php echo ($user['location'] ?? '') === 'Profijt Hoogeveen' ? 'selected' : ''; ?>>Profijt Hoogeveen</option>
+                                                                            <option value="Profijt Assen" <?php echo ($user['location'] ?? '') === 'Profijt Assen' ? 'selected' : ''; ?>>Profijt Assen</option>
+                                                                            <option value="Henders & Hazel Assen" <?php echo ($user['location'] ?? '') === 'Henders & Hazel Assen' ? 'selected' : ''; ?>>Henders & Hazel Assen</option>
                                                                         </select>
                                                                     </div>
                                                                 </div>
                                                                 <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
                                                                     <button type="submit" class="btn btn-primary">
-                                                                        <i class="bi bi-save"></i> Save Changes
+                                                                        <i class="bi bi-save"></i> Wijzigingen Opslaan
                                                                     </button>
                                                                 </div>
                                                             </form>
@@ -362,13 +382,9 @@ $pageTitle = 'User Management';
                 </div>
             </div>
         </div>
-    </div>
-
-    <footer class="mt-5 py-3 bg-light">
-        <div class="container text-center">
-            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. All rights reserved.</p>
+            </main>
         </div>
-    </footer>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

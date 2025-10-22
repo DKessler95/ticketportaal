@@ -1,10 +1,7 @@
 <?php
 /**
- * Language System
- * 
- * Multi-language support for the ICT Ticketportaal
- * Default language: Dutch (nl)
- * Supported languages: Dutch (nl), English (en)
+ * Language Helper Functions
+ * Multi-language support for ICT Ticketportaal
  */
 
 // Start session if not already started
@@ -12,83 +9,59 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Get current language from session or default to Dutch
+// Set default language
 if (!isset($_SESSION['language'])) {
     $_SESSION['language'] = 'nl'; // Default to Dutch
 }
 
+// Load language file
 $currentLanguage = $_SESSION['language'];
+$languageFile = __DIR__ . '/languages/' . $currentLanguage . '.php';
 
-/**
- * Load language file
- */
-function loadLanguage($lang = null) {
-    global $currentLanguage;
-    
-    if ($lang === null) {
-        $lang = $currentLanguage;
-    }
-    
-    $langFile = __DIR__ . "/languages/{$lang}.php";
-    
-    if (file_exists($langFile)) {
-        return include $langFile;
-    }
-    
+if (file_exists($languageFile)) {
+    $translations = require $languageFile;
+} else {
     // Fallback to Dutch if language file not found
-    return include __DIR__ . "/languages/nl.php";
+    $translations = require __DIR__ . '/languages/nl.php';
 }
 
-// Load current language
-$lang = loadLanguage();
-
 /**
- * Get translated text
+ * Get translation for a key
  * 
  * @param string $key Translation key
- * @param array $params Optional parameters for string replacement
+ * @param string $default Default value if key not found
  * @return string Translated text
  */
-function __($key, $params = []) {
-    global $lang;
-    
-    // Split key by dot notation (e.g., 'common.welcome')
-    $keys = explode('.', $key);
-    $value = $lang;
-    
-    foreach ($keys as $k) {
-        if (isset($value[$k])) {
-            $value = $value[$k];
-        } else {
-            return $key; // Return key if translation not found
-        }
-    }
-    
-    // Replace parameters
-    if (!empty($params) && is_string($value)) {
-        foreach ($params as $param => $replacement) {
-            $value = str_replace(':' . $param, $replacement, $value);
-        }
-    }
-    
-    return $value;
+function __($key, $default = '') {
+    global $translations;
+    return $translations[$key] ?? $default ?? $key;
 }
 
 /**
- * Set language
+ * Echo translation
+ * 
+ * @param string $key Translation key
+ * @param string $default Default value if key not found
+ */
+function _e($key, $default = '') {
+    echo __($key, $default);
+}
+
+/**
+ * Set current language
  * 
  * @param string $lang Language code (nl, en)
  */
 function setLanguage($lang) {
-    global $currentLanguage;
-    
-    if (in_array($lang, ['nl', 'en'])) {
+    $validLanguages = ['nl', 'en'];
+    if (in_array($lang, $validLanguages)) {
         $_SESSION['language'] = $lang;
-        $currentLanguage = $lang;
-        
-        // Reload language
-        global $lang;
-        $lang = loadLanguage();
+        // Reload translations
+        global $translations;
+        $languageFile = __DIR__ . '/languages/' . $lang . '.php';
+        if (file_exists($languageFile)) {
+            $translations = require $languageFile;
+        }
     }
 }
 
@@ -98,6 +71,17 @@ function setLanguage($lang) {
  * @return string Current language code
  */
 function getCurrentLanguage() {
-    global $currentLanguage;
-    return $currentLanguage;
+    return $_SESSION['language'] ?? 'nl';
+}
+
+/**
+ * Get available languages
+ * 
+ * @return array Available languages
+ */
+function getAvailableLanguages() {
+    return [
+        'nl' => 'Nederlands',
+        'en' => 'English'
+    ];
 }

@@ -68,17 +68,37 @@ $csrfToken = generateCSRFToken();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo SITE_NAME; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #004E89 0%, #1A7F8E 100%);
+        }
+        .login-card {
+            border-radius: 1rem;
+            border: none;
+        }
+        .logo-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem 1rem 0 0;
+            margin: -1rem -1rem 1.5rem -1rem;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-5 col-lg-4">
-                <div class="card shadow">
+                <div class="card shadow-lg login-card">
                     <div class="card-body p-4">
-                        <div class="text-center mb-4">
-                            <h1 class="h3 mb-3"><?php echo SITE_NAME; ?></h1>
-                            <p class="text-muted">Log in om door te gaan</p>
+                        <div class="logo-container text-center">
+                            <img src="<?php echo SITE_URL; ?>/assets/images/logo/logo-kruit-en-kramer.svg" 
+                                 alt="Kruit & Kramer" 
+                                 class="img-fluid mb-2" 
+                                 style="max-width: 200px;">
+                            <h1 class="h4 mb-1" style="color: #004E89;"><?php _e('site_name'); ?></h1>
+                            <p class="text-muted small mb-0"><?php _e('login_message'); ?></p>
                         </div>
                         
                         <?php if (!empty($error)): ?>
@@ -91,7 +111,7 @@ $csrfToken = generateCSRFToken();
                             <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
                             
                             <div class="mb-3">
-                                <label for="email" class="form-label">E-mailadres</label>
+                                <label for="email" class="form-label"><?php _e('email'); ?></label>
                                 <input 
                                     type="email" 
                                     class="form-control <?php echo (!empty($error) && !empty($email)) ? 'is-invalid' : ''; ?>" 
@@ -105,26 +125,26 @@ $csrfToken = generateCSRFToken();
                             </div>
                             
                             <div class="mb-3">
-                                <label for="password" class="form-label">Wachtwoord</label>
+                                <label for="password" class="form-label"><?php _e('password'); ?></label>
                                 <input 
                                     type="password" 
                                     class="form-control <?php echo (!empty($error) && !empty($email)) ? 'is-invalid' : ''; ?>" 
                                     id="password" 
                                     name="password" 
                                     required
-                                    placeholder="Voer uw wachtwoord in"
+                                    placeholder="<?php _e('password'); ?>"
                                 >
                             </div>
                             
                             <div class="mb-3">
                                 <a href="request_reset.php" class="text-decoration-none small">
-                                    Wachtwoord vergeten?
+                                    <?php _e('forgot_password'); ?>
                                 </a>
                             </div>
                             
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">
-                                    Inloggen
+                                    <?php _e('login'); ?>
                                 </button>
                             </div>
                         </form>
@@ -132,19 +152,19 @@ $csrfToken = generateCSRFToken();
                         <hr class="my-4">
                         
                         <div class="text-center">
-                            <p class="mb-0 small text-muted">
-                                Nog geen account? 
-                                <a href="register.php" class="text-decoration-none">
-                                    Registreer hier
-                                </a>
-                            </p>
+                            <div class="alert alert-info small mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                <strong><?php _e('no_access'); ?></strong><br>
+                                <?php _e('contact_ict'); ?><br>
+                                <i class="bi bi-telephone-fill"></i> <?php _e('phone'); ?>: <strong>777</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="text-center mt-3">
                     <a href="index.php" class="text-decoration-none text-muted small">
-                        &larr; Terug naar home
+                        &larr; <?php _e('back'); ?>
                     </a>
                 </div>
             </div>

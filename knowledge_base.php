@@ -1,8 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/classes/KnowledgeBase.php';
 require_once __DIR__ . '/classes/Category.php';
-require_once __DIR__ . '/includes/functions.php';
+
+// Initialize session
+initSession();
 
 $kb = new KnowledgeBase();
 $categoryObj = new Category();
@@ -38,43 +40,30 @@ foreach ($articles as $article) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Knowledge Base - ICT Ticketportaal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Kennisbank - ICT Ticketportaal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.php">ICT Ticketportaal</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="<?php echo $_SESSION['role']; ?>/dashboard.php">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="logout.php">Logout</a>
-                        </li>
-                    <?php else: ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="login.php">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="register.php">Register</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-md-12">
-                <h1 class="mb-4">Knowledge Base</h1>
+            <?php if (checkLogin()): ?>
+                <?php include __DIR__ . '/includes/sidebar.php'; ?>
+                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Kennisbank</h1>
+                        <?php if (checkRole(['admin', 'agent'])): ?>
+                            <a href="admin/kb_manage.php" class="btn btn-primary">
+                                <i class="bi bi-pencil-square"></i> Artikelen Beheren
+                            </a>
+                        <?php endif; ?>
+                    </div>
+            <?php else: ?>
+                <main class="col-12">
+                    <div class="container mt-4">
+                        <h1 class="mb-4">Kennisbank</h1>
+            <?php endif; ?>
                 
                 <!-- Search Form -->
                 <div class="card mb-4">
@@ -82,12 +71,12 @@ foreach ($articles as $article) {
                         <form method="GET" action="knowledge_base.php" class="row g-3">
                             <div class="col-md-6">
                                 <input type="text" class="form-control" name="search" 
-                                       placeholder="Search articles..." 
+                                       placeholder="Zoek artikelen..." 
                                        value="<?php echo htmlspecialchars($searchTerm); ?>">
                             </div>
                             <div class="col-md-4">
                                 <select class="form-select" name="category">
-                                    <option value="0">All Categories</option>
+                                    <option value="0">Alle Categorieën</option>
                                     <?php foreach ($categories as $cat): ?>
                                         <option value="<?php echo $cat['category_id']; ?>"
                                                 <?php echo $categoryFilter == $cat['category_id'] ? 'selected' : ''; ?>>
@@ -97,12 +86,12 @@ foreach ($articles as $article) {
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                <button type="submit" class="btn btn-primary w-100">Zoeken</button>
                             </div>
                         </form>
                         <?php if (!empty($searchTerm) || $categoryFilter > 0): ?>
                             <div class="mt-2">
-                                <a href="knowledge_base.php" class="btn btn-sm btn-secondary">Clear Filters</a>
+                                <a href="knowledge_base.php" class="btn btn-sm btn-secondary">Filters Wissen</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -111,14 +100,14 @@ foreach ($articles as $article) {
                 <!-- Articles Display -->
                 <?php if (empty($articles)): ?>
                     <div class="alert alert-info">
-                        No articles found. <?php echo !empty($searchTerm) ? 'Try a different search term.' : ''; ?>
+                        Geen artikelen gevonden. <?php echo !empty($searchTerm) ? 'Probeer een andere zoekterm.' : ''; ?>
                     </div>
                 <?php else: ?>
                     <?php if (!empty($searchTerm) || $categoryFilter > 0): ?>
                         <!-- List view for search results -->
                         <div class="card">
                             <div class="card-header">
-                                <h5 class="mb-0">Search Results (<?php echo count($articles); ?>)</h5>
+                                <h5 class="mb-0">Zoekresultaten (<?php echo count($articles); ?>)</h5>
                             </div>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($articles as $article): ?>
@@ -127,12 +116,12 @@ foreach ($articles as $article) {
                                         <div class="d-flex w-100 justify-content-between">
                                             <h5 class="mb-1"><?php echo htmlspecialchars($article['title']); ?></h5>
                                             <small class="text-muted">
-                                                <i class="bi bi-eye"></i> <?php echo $article['views']; ?> views
+                                                <i class="bi bi-eye"></i> <?php echo $article['views']; ?> weergaven
                                             </small>
                                         </div>
                                         <p class="mb-1">
                                             <span class="badge bg-secondary">
-                                                <?php echo htmlspecialchars($article['category_name'] ?? 'Uncategorized'); ?>
+                                                <?php echo htmlspecialchars($article['category_name'] ?? 'Ongecategoriseerd'); ?>
                                             </span>
                                         </p>
                                         <small class="text-muted">
@@ -156,7 +145,7 @@ foreach ($articles as $article) {
                                             <div class="d-flex w-100 justify-content-between">
                                                 <h5 class="mb-1"><?php echo htmlspecialchars($article['title']); ?></h5>
                                                 <small class="text-muted">
-                                                    <?php echo $article['views']; ?> views
+                                                    <?php echo $article['views']; ?> weergaven
                                                 </small>
                                             </div>
                                             <small class="text-muted">
@@ -171,8 +160,13 @@ foreach ($articles as $article) {
                 <?php endif; ?>
             </div>
         </div>
-    </div>
+                </main>
+            </div>
+        </div>
+    <?php if (!checkLogin()): ?>
+        </div>
+    <?php endif; ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

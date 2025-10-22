@@ -25,6 +25,13 @@ $categoryClass = new Category();
 // Get active categories
 $categories = $categoryClass->getCategories(true); // true = active only
 
+// Get pre-selected type from URL parameter
+$preselectedType = $_GET['type'] ?? null;
+$validTypes = ['incident', 'service_request', 'change_request', 'feature_request'];
+if ($preselectedType && !in_array($preselectedType, $validTypes)) {
+    $preselectedType = null;
+}
+
 // Initialize variables
 $errors = [];
 $success = false;
@@ -40,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = sanitizeInput($_POST['title'] ?? '');
         $description = $_POST['description'] ?? ''; // Don't sanitize yet, we need original for storage
         $categoryId = filter_var($_POST['category_id'] ?? 0, FILTER_VALIDATE_INT);
+        $ticketType = $_POST['ticket_type'] ?? 'incident';
         $priority = $_POST['priority'] ?? 'medium';
         
         // Validation
@@ -57,10 +65,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Please select a category';
         }
         
+        // Validate ticket type
+        $validTypes = ['incident', 'service_request', 'change_request', 'feature_request'];
+        if (!in_array($ticketType, $validTypes)) {
+            $ticketType = 'incident';
+        }
+        
         // Validate priority
         $validPriorities = ['low', 'medium', 'high', 'urgent'];
         if (!in_array($priority, $validPriorities)) {
             $priority = 'medium';
+        }
+        
+        // Validate dynamic field values if present
+        if (isset($_POST['fields']) && is_array($_POST['fields'])) {
+            $fieldErrors = $ticketClass->validateFieldValues($categoryId, $_POST['fields']);
+            if (!empty($fieldErrors)) {
+                $errors = array_merge($errors, $fieldErrors);
+            }
         }
         
         // If no errors, create ticket
@@ -71,10 +93,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $description,
                 $categoryId,
                 $priority,
-                'web'
+                'web',
+                $ticketType
             );
             
             if ($ticketId) {
+                // Save dynamic field values if present
+                if (isset($_POST['fields']) && is_array($_POST['fields'])) {
+                    $ticketClass->saveFieldValues($ticketId, $_POST['fields']);
+                }
+                
                 // Handle file upload if present
                 if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] !== UPLOAD_ERR_NO_FILE) {
                     $fileValidation = validateFileUpload($_FILES['attachment']);
@@ -132,67 +160,40 @@ $pageTitle = 'Create Ticket';
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo SITE_URL; ?>/user/dashboard.php">
-                <i class="bi bi-ticket-perforated"></i> <?php echo escapeOutput(SITE_NAME); ?>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/dashboard.php">
-                            <i class="bi bi-house-door"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/my_tickets.php">
-                            <i class="bi bi-list-ul"></i> My Tickets
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="<?php echo SITE_URL; ?>/user/create_ticket.php">
-                            <i class="bi bi-plus-circle"></i> Create Ticket
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/knowledge_base.php">
-                            <i class="bi bi-book"></i> Knowledge Base
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?php echo escapeOutput($userName); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout.php">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4 mb-5">
+    <div class="container-fluid">
+        <div class="row">
+            <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-4 mb-5">
         <div class="row">
             <div class="col-lg-8 offset-lg-2">
-                <h1 class="mb-4"><i class="bi bi-plus-circle"></i> Create New Ticket</h1>
+                <?php if ($preselectedType): ?>
+                    <?php
+                    $typeInfo = [
+                        'incident' => ['icon' => 'exclamation-triangle-fill', 'color' => 'danger', 'label' => 'Incident'],
+                        'service_request' => ['icon' => 'person-plus-fill', 'color' => 'info', 'label' => 'Service Request'],
+                        'change_request' => ['icon' => 'arrow-repeat', 'color' => 'warning', 'label' => 'Change Request'],
+                        'feature_request' => ['icon' => 'lightbulb-fill', 'color' => 'success', 'label' => 'Wens/Feature']
+                    ];
+                    $info = $typeInfo[$preselectedType];
+                    ?>
+                    <div class="alert alert-<?php echo $info['color']; ?> alert-dismissible fade show" role="alert">
+                        <i class="bi bi-<?php echo $info['icon']; ?>"></i>
+                        <strong>Type aanvraag:</strong> <?php echo $info['label']; ?>
+                        <a href="<?php echo SITE_URL; ?>/user/dashboard.php" class="btn-close" aria-label="Close"></a>
+                    </div>
+                <?php endif; ?>
+                <h1 class="mb-4"><i class="bi bi-plus-circle"></i> Nieuw Ticket Aanmaken</h1>
 
                 <?php if ($success): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <h5 class="alert-heading"><i class="bi bi-check-circle"></i> Ticket Created Successfully!</h5>
-                        <p>Your ticket has been created with number: <strong><?php echo escapeOutput($ticketNumber); ?></strong></p>
-                        <p class="mb-0">You will receive a confirmation email shortly. You can track your ticket's progress from your dashboard.</p>
+                        <h5 class="alert-heading"><i class="bi bi-check-circle"></i> Ticket Succesvol Aangemaakt!</h5>
+                        <p>Uw ticket is aangemaakt met nummer: <strong><?php echo escapeOutput($ticketNumber); ?></strong></p>
+                        <p class="mb-0">U ontvangt binnenkort een bevestigingsmail. U kunt de voortgang van uw ticket volgen vanaf uw dashboard.</p>
                         <hr>
                         <div class="d-flex gap-2">
-                            <a href="<?php echo SITE_URL; ?>/user/dashboard.php" class="btn btn-success">Go to Dashboard</a>
-                            <a href="<?php echo SITE_URL; ?>/user/create_ticket.php" class="btn btn-outline-success">Create Another Ticket</a>
+                            <a href="<?php echo SITE_URL; ?>/user/dashboard.php" class="btn btn-success">Naar Dashboard</a>
+                            <a href="<?php echo SITE_URL; ?>/user/create_ticket.php" class="btn btn-outline-success">Nog een Ticket Aanmaken</a>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -200,7 +201,7 @@ $pageTitle = 'Create Ticket';
 
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Please correct the following errors:</h5>
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Corrigeer de volgende fouten:</h5>
                         <ul class="mb-0">
                             <?php foreach ($errors as $error): ?>
                                 <li><?php echo escapeOutput($error); ?></li>
@@ -217,7 +218,7 @@ $pageTitle = 'Create Ticket';
                                 <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
 
                                 <div class="mb-3">
-                                    <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                                    <label for="title" class="form-label">Titel <span class="text-danger">*</span></label>
                                     <input type="text" 
                                            class="form-control <?php echo isset($errors) && in_array('Title is required', $errors) ? 'is-invalid' : ''; ?>" 
                                            id="title" 
@@ -225,16 +226,16 @@ $pageTitle = 'Create Ticket';
                                            maxlength="255"
                                            value="<?php echo isset($_POST['title']) ? escapeOutput($_POST['title']) : ''; ?>"
                                            required>
-                                    <div class="form-text">Provide a brief, descriptive title for your issue</div>
+                                    <div class="form-text">Geef een korte, beschrijvende titel voor uw probleem</div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
+                                    <label for="category_id" class="form-label">Categorie <span class="text-danger">*</span></label>
                                     <select class="form-select <?php echo isset($errors) && in_array('Please select a category', $errors) ? 'is-invalid' : ''; ?>" 
                                             id="category_id" 
                                             name="category_id" 
                                             required>
-                                        <option value="">-- Select a category --</option>
+                                        <option value="">-- Selecteer een categorie --</option>
                                         <?php foreach ($categories as $category): ?>
                                             <option value="<?php echo $category['category_id']; ?>" 
                                                     data-priority="<?php echo $category['default_priority']; ?>"
@@ -246,50 +247,94 @@ $pageTitle = 'Create Ticket';
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <div class="form-text">Select the category that best describes your issue</div>
+                                    <div class="form-text">Selecteer de categorie die uw probleem het beste beschrijft</div>
                                 </div>
 
+                                <?php 
+                                $selectedType = $_POST['ticket_type'] ?? $preselectedType ?? 'incident';
+                                $typeLabels = [
+                                    'incident' => 'Incident - Er is iets kapot of werkt niet',
+                                    'service_request' => 'Service Request - Account aanvraag, toegang, installatie',
+                                    'change_request' => 'Change Request - Wijziging in systeem of configuratie',
+                                    'feature_request' => 'Wens/Feature - Nieuwe functionaliteit of software aanvraag'
+                                ];
+                                ?>
+                                
+                                <?php if ($preselectedType): ?>
+                                    <!-- Type is locked when coming from dashboard -->
+                                    <input type="hidden" name="ticket_type" value="<?php echo escapeOutput($selectedType); ?>">
+                                    <div class="mb-3">
+                                        <label class="form-label">Type Aanvraag <span class="text-danger">*</span></label>
+                                        <div class="form-control bg-light" style="cursor: not-allowed;">
+                                            <?php echo escapeOutput($typeLabels[$selectedType]); ?>
+                                        </div>
+                                        <div class="form-text">Type is vastgezet op basis van uw selectie</div>
+                                    </div>
+                                <?php else: ?>
+                                    <!-- Type is selectable when accessing directly -->
+                                    <div class="mb-3">
+                                        <label for="ticket_type" class="form-label">Type Aanvraag <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="ticket_type" name="ticket_type" required>
+                                            <option value="incident" <?php echo ($selectedType === 'incident') ? 'selected' : ''; ?>>
+                                                Incident - Er is iets kapot of werkt niet
+                                            </option>
+                                            <option value="service_request" <?php echo ($selectedType === 'service_request') ? 'selected' : ''; ?>>
+                                                Service Request - Account aanvraag, toegang, installatie
+                                            </option>
+                                            <option value="change_request" <?php echo ($selectedType === 'change_request') ? 'selected' : ''; ?>>
+                                                Change Request - Wijziging in systeem of configuratie
+                                            </option>
+                                            <option value="feature_request" <?php echo ($selectedType === 'feature_request') ? 'selected' : ''; ?>>
+                                                Wens/Feature - Nieuwe functionaliteit of software aanvraag
+                                            </option>
+                                        </select>
+                                        <div class="form-text">Selecteer het type aanvraag dat het beste past bij uw situatie</div>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="mb-3">
-                                    <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                                    <label for="priority" class="form-label">Prioriteit <span class="text-danger">*</span></label>
                                     <select class="form-select" id="priority" name="priority" required>
-                                        <option value="low" <?php echo (isset($_POST['priority']) && $_POST['priority'] === 'low') ? 'selected' : ''; ?>>Low</option>
-                                        <option value="medium" <?php echo (!isset($_POST['priority']) || $_POST['priority'] === 'medium') ? 'selected' : ''; ?>>Medium</option>
-                                        <option value="high" <?php echo (isset($_POST['priority']) && $_POST['priority'] === 'high') ? 'selected' : ''; ?>>High</option>
+                                        <option value="low" <?php echo (isset($_POST['priority']) && $_POST['priority'] === 'low') ? 'selected' : ''; ?>>Laag</option>
+                                        <option value="medium" <?php echo (!isset($_POST['priority']) || $_POST['priority'] === 'medium') ? 'selected' : ''; ?>>Gemiddeld</option>
+                                        <option value="high" <?php echo (isset($_POST['priority']) && $_POST['priority'] === 'high') ? 'selected' : ''; ?>>Hoog</option>
                                         <option value="urgent" <?php echo (isset($_POST['priority']) && $_POST['priority'] === 'urgent') ? 'selected' : ''; ?>>Urgent</option>
                                     </select>
-                                    <div class="form-text">Priority will be automatically set based on category, but you can adjust it if needed</div>
+                                    <div class="form-text">Prioriteit wordt automatisch ingesteld op basis van categorie, maar u kunt deze aanpassen indien nodig</div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                                    <label for="description" class="form-label">Beschrijving <span class="text-danger">*</span></label>
                                     <textarea class="form-control <?php echo isset($errors) && in_array('Description is required', $errors) ? 'is-invalid' : ''; ?>" 
                                               id="description" 
                                               name="description" 
-                                              rows="6" 
-                                              required><?php echo isset($_POST['description']) ? escapeOutput($_POST['description']) : ''; ?></textarea>
-                                    <div class="form-text">Provide detailed information about your issue. Include any error messages, steps to reproduce, and what you've already tried.</div>
+                                              rows="6"><?php echo isset($_POST['description']) ? $_POST['description'] : ''; ?></textarea>
+                                    <div class="form-text">Geef gedetailleerde informatie over uw probleem. Vermeld eventuele foutmeldingen, stappen om te reproduceren en wat u al geprobeerd heeft.</div>
                                 </div>
 
+                                <!-- Dynamic Category Fields Container -->
+                                <div id="dynamicFieldsContainer"></div>
+
                                 <div class="mb-3">
-                                    <label for="attachment" class="form-label">Attachment (Optional)</label>
+                                    <label for="attachment" class="form-label">Bijlage (Optioneel)</label>
                                     <input type="file" 
                                            class="form-control" 
                                            id="attachment" 
                                            name="attachment"
                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.zip">
                                     <div class="form-text">
-                                        Maximum file size: <?php echo (MAX_FILE_SIZE / 1048576); ?>MB. 
-                                        Allowed types: <?php echo implode(', ', ALLOWED_EXTENSIONS); ?>
+                                        Maximale bestandsgrootte: <?php echo (MAX_FILE_SIZE / 1048576); ?>MB. 
+                                        Toegestane types: <?php echo implode(', ', ALLOWED_EXTENSIONS); ?>
                                     </div>
                                     <div id="filePreview" class="mt-2"></div>
                                 </div>
 
                                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                     <a href="<?php echo SITE_URL; ?>/user/dashboard.php" class="btn btn-secondary">
-                                        <i class="bi bi-x-circle"></i> Cancel
+                                        <i class="bi bi-x-circle"></i> Annuleren
                                     </a>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-check-circle"></i> Create Ticket
+                                        <i class="bi bi-check-circle"></i> Ticket Aanmaken
                                     </button>
                                 </div>
                             </form>
@@ -301,13 +346,32 @@ $pageTitle = 'Create Ticket';
     </div>
 
     <footer class="mt-5 py-3 bg-light">
-        <div class="container text-center">
-            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. All rights reserved.</p>
+            </main>
         </div>
-    </footer>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Dynamic Fields -->
+    <script src="<?php echo SITE_URL; ?>/assets/js/dynamic-fields.js"></script>
+    
+    <!-- TinyMCE for Description -->
+    <script src="https://cdn.tiny.cloud/1/f5xc5i53b0di57yjmcf5954fyhbtmb9k28r3pu0nn19ol86c/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
+        // Initialize TinyMCE for description field
+        tinymce.init({
+            selector: '#description',
+            height: 400,
+            menubar: false,
+            plugins: ['lists', 'link', 'code', 'table', 'image'],
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image | removeformat code',
+            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; }',
+            branding: false,
+            promotion: false,
+            statusbar: false,
+            resize: true
+        });
+        
         // Auto-set priority based on category selection
         document.getElementById('category_id').addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
@@ -327,7 +391,7 @@ $pageTitle = 'Create Ticket';
             if (file) {
                 // Check file size
                 if (file.size > maxSize) {
-                    preview.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> File size exceeds maximum allowed (' + (maxSize / 1048576) + 'MB)</div>';
+                    preview.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Bestandsgrootte overschrijdt maximum toegestaan (' + (maxSize / 1048576) + 'MB)</div>';
                     this.value = '';
                     return;
                 }
@@ -340,17 +404,28 @@ $pageTitle = 'Create Ticket';
             }
         });
 
-        // Form validation
+        // Form validation and submission
         document.getElementById('createTicketForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
             const title = document.getElementById('title').value.trim();
             const category = document.getElementById('category_id').value;
-            const description = document.getElementById('description').value.trim();
             
-            if (!title || !category || !description) {
-                e.preventDefault();
-                alert('Please fill in all required fields');
-                return false;
+            // Save TinyMCE content to textarea
+            if (tinymce.get('description')) {
+                tinymce.get('description').save();
+                
+                // Get TinyMCE content for validation
+                const description = tinymce.get('description').getContent({format: 'text'}).trim();
+                
+                if (!title || !category || !description) {
+                    alert('Vul alle verplichte velden in');
+                    return false;
+                }
             }
+            
+            // Submit the form
+            this.submit();
         });
     </script>
 </body>

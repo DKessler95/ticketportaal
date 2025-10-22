@@ -49,7 +49,7 @@ Options -MultiViews
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
     # Content Security Policy (adjust as needed for your application)
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; frame-ancestors 'self';"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net https://cdn.tiny.cloud; connect-src 'self' https://cdn.jsdelivr.net https://cdn.tiny.cloud; frame-ancestors 'self';"
 
     # Remove server information
     Header unset Server

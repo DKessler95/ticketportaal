@@ -63,7 +63,7 @@ class Ticket {
     /**
      * Create a new ticket
      */
-    public function createTicket($userId, $title, $description, $categoryId, $priority = 'medium', $source = 'web') {
+    public function createTicket($userId, $title, $description, $categoryId, $priority = 'medium', $source = 'web', $ticketType = 'incident') {
         try {
             // Generate unique ticket number
             $ticketNumber = $this->generateTicketNumber();
@@ -75,6 +75,12 @@ class Ticket {
             if (empty($title) || empty($description) || empty($categoryId)) {
                 $this->error = 'Title, description, and category are required';
                 return false;
+            }
+            
+            // Validate ticket type
+            $validTypes = ['incident', 'service_request', 'change_request', 'feature_request'];
+            if (!in_array($ticketType, $validTypes)) {
+                $ticketType = 'incident';
             }
             
             // Validate priority
@@ -89,8 +95,8 @@ class Ticket {
                 $source = 'web';
             }
             
-            $sql = "INSERT INTO tickets (ticket_number, user_id, category_id, title, description, priority, source, status) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'open')";
+            $sql = "INSERT INTO tickets (ticket_number, user_id, category_id, title, description, priority, ticket_type, source, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open')";
             
             $result = $this->db->execute($sql, [
                 $ticketNumber,
@@ -99,6 +105,7 @@ class Ticket {
                 $title,
                 $description,
                 $priority,
+                $ticketType,
                 $source
             ]);
             
@@ -356,18 +363,24 @@ class Ticket {
                 return false;
             }
             
-            // Require resolution text when marking as resolved
-            if ($status === 'resolved' && empty($resolution)) {
-                $this->error = 'Resolution text is required when marking ticket as resolved';
+            // Require resolution text when marking as resolved or closed
+            if (($status === 'resolved' || $status === 'closed') && empty($resolution)) {
+                $this->error = 'Resolution text is required when marking ticket as resolved or closed';
                 return false;
             }
             
             // Build SQL based on status
-            if ($status === 'resolved') {
+            if ($status === 'resolved' || $status === 'closed') {
                 $sql = "UPDATE tickets 
                         SET status = ?, resolution = ?, resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
                         WHERE ticket_id = ?";
                 $params = [$status, $resolution, $ticketId];
+            } elseif ($status === 'open' || $status === 'in_progress' || $status === 'pending') {
+                // Clear resolution when reopening ticket
+                $sql = "UPDATE tickets 
+                        SET status = ?, resolution = NULL, resolved_at = NULL, updated_at = CURRENT_TIMESTAMP 
+                        WHERE ticket_id = ?";
+                $params = [$status, $ticketId];
             } else {
                 $sql = "UPDATE tickets 
                         SET status = ?, updated_at = CURRENT_TIMESTAMP 
@@ -477,6 +490,31 @@ class Ticket {
             logError('Ticket', 'Failed to fetch comments', ['ticket_id' => $ticketId, 'error' => $e->getMessage()]);
             $this->error = 'Failed to retrieve comments';
             return [];
+        }
+    }
+
+    /**
+     * Delete a comment (admin only)
+     */
+    public function deleteComment($commentId, $ticketId) {
+        try {
+            $sql = "DELETE FROM ticket_comments WHERE comment_id = ? AND ticket_id = ?";
+            $result = $this->db->execute($sql, [$commentId, $ticketId]);
+            
+            if ($result) {
+                logError('Ticket', 'Comment deleted', [
+                    'comment_id' => $commentId,
+                    'ticket_id' => $ticketId
+                ]);
+                return true;
+            }
+            
+            $this->error = 'Failed to delete comment';
+            return false;
+        } catch (Exception $e) {
+            logError('Ticket', 'Failed to delete comment', ['comment_id' => $commentId, 'error' => $e->getMessage()]);
+            $this->error = 'An error occurred while deleting the comment';
+            return false;
         }
     }
 
@@ -767,6 +805,228 @@ class Ticket {
             ]);
             $this->error = 'An error occurred while updating the ticket priority';
             return false;
+        }
+    }
+    
+    /**
+     * Validate dynamic field values
+     * 
+     * @param int $categoryId Category ID
+     * @param array $fieldValues Array with field_name => value pairs
+     * @return array Array of validation errors (empty if valid)
+     */
+    public function validateFieldValues($categoryId, $fieldValues) {
+        $errors = [];
+        
+        try {
+            require_once __DIR__ . '/CategoryField.php';
+            $categoryField = new CategoryField();
+            
+            // Get all required fields for this category
+            $fields = $categoryField->getFieldsByCategory($categoryId, true);
+            
+            foreach ($fields as $field) {
+                $fieldName = $field['field_name'];
+                $fieldLabel = $field['field_label'];
+                $isRequired = $field['is_required'] == 1;
+                $fieldType = $field['field_type'];
+                
+                // Check if required field is present and not empty
+                if ($isRequired) {
+                    if (!isset($fieldValues[$fieldName]) || $fieldValues[$fieldName] === '' || $fieldValues[$fieldName] === null) {
+                        $errors[] = "{$fieldLabel} is verplicht";
+                        continue;
+                    }
+                }
+                
+                // Skip validation if field is not provided and not required
+                if (!isset($fieldValues[$fieldName]) || $fieldValues[$fieldName] === '') {
+                    continue;
+                }
+                
+                $value = $fieldValues[$fieldName];
+                
+                // Type-specific validation
+                switch ($fieldType) {
+                    case 'email':
+                        if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                            $errors[] = "{$fieldLabel} moet een geldig email adres zijn";
+                        }
+                        break;
+                        
+                    case 'number':
+                        if (!is_numeric($value)) {
+                            $errors[] = "{$fieldLabel} moet een nummer zijn";
+                        }
+                        break;
+                        
+                    case 'tel':
+                        // Basic phone validation (digits, spaces, dashes, parentheses, plus)
+                        if (!preg_match('/^[\d\s\-\(\)\+]+$/', $value)) {
+                            $errors[] = "{$fieldLabel} moet een geldig telefoonnummer zijn";
+                        }
+                        break;
+                        
+                    case 'date':
+                        // Validate date format
+                        $date = \DateTime::createFromFormat('Y-m-d', $value);
+                        if (!$date || $date->format('Y-m-d') !== $value) {
+                            $errors[] = "{$fieldLabel} moet een geldige datum zijn";
+                        }
+                        break;
+                        
+                    case 'select':
+                    case 'radio':
+                        // Validate value is in options
+                        if (!empty($field['field_options'])) {
+                            $options = is_array($field['field_options']) 
+                                ? $field['field_options'] 
+                                : json_decode($field['field_options'], true);
+                            
+                            if ($options && !in_array($value, $options)) {
+                                $errors[] = "{$fieldLabel} heeft een ongeldige waarde";
+                            }
+                        }
+                        break;
+                        
+                    case 'checkbox':
+                        // Validate checkbox values are in options
+                        if (!empty($field['field_options']) && is_array($value)) {
+                            $options = is_array($field['field_options']) 
+                                ? $field['field_options'] 
+                                : json_decode($field['field_options'], true);
+                            
+                            if ($options) {
+                                foreach ($value as $checkValue) {
+                                    if (!in_array($checkValue, $options)) {
+                                        $errors[] = "{$fieldLabel} heeft een ongeldige waarde";
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+            
+        } catch (Exception $e) {
+            logError('Ticket', 'Failed to validate field values', [
+                'category_id' => $categoryId,
+                'error' => $e->getMessage()
+            ]);
+            $errors[] = 'Fout bij valideren van velden';
+        }
+        
+        return $errors;
+    }
+    
+    /**
+     * Save dynamic field values for a ticket
+     * 
+     * @param int $ticketId Ticket ID
+     * @param array $fieldValues Array with field_name => value pairs
+     * @return bool True on success, false on failure
+     */
+    public function saveFieldValues($ticketId, $fieldValues) {
+        if (empty($fieldValues) || !is_array($fieldValues)) {
+            return true; // No fields to save
+        }
+        
+        try {
+            require_once __DIR__ . '/CategoryField.php';
+            $categoryField = new CategoryField();
+            
+            foreach ($fieldValues as $fieldName => $value) {
+                // Skip empty values
+                if ($value === '' || $value === null) {
+                    continue;
+                }
+                
+                // Get field_id from field_name
+                $field = $this->db->fetchOne(
+                    "SELECT field_id, field_type FROM category_fields WHERE field_name = ?",
+                    [$fieldName]
+                );
+                
+                if (!$field) {
+                    logError('Ticket', 'Field not found', [
+                        'field_name' => $fieldName,
+                        'ticket_id' => $ticketId
+                    ]);
+                    continue;
+                }
+                
+                // Handle checkbox arrays
+                if (is_array($value)) {
+                    $value = json_encode($value);
+                }
+                
+                // Insert or update value
+                $sql = "INSERT INTO ticket_field_values (ticket_id, field_id, field_value) 
+                        VALUES (?, ?, ?) 
+                        ON DUPLICATE KEY UPDATE field_value = ?";
+                
+                $this->db->execute($sql, [$ticketId, $field['field_id'], $value, $value]);
+            }
+            
+            return true;
+            
+        } catch (Exception $e) {
+            logError('Ticket', 'Failed to save field values', [
+                'ticket_id' => $ticketId,
+                'error' => $e->getMessage()
+            ]);
+            $this->error = 'Failed to save field values';
+            return false;
+        }
+    }
+    
+    /**
+     * Get dynamic field values for a ticket
+     * 
+     * @param int $ticketId Ticket ID
+     * @return array Array of field values with labels and types
+     */
+    public function getFieldValues($ticketId) {
+        try {
+            $sql = "SELECT cf.field_name, cf.field_label, cf.field_type, cf.field_options,
+                           tfv.field_value
+                    FROM ticket_field_values tfv
+                    JOIN category_fields cf ON tfv.field_id = cf.field_id
+                    WHERE tfv.ticket_id = ?
+                    ORDER BY cf.field_order ASC";
+            
+            $values = $this->db->fetchAll($sql, [$ticketId]);
+            
+            // Decode JSON values
+            if ($values) {
+                foreach ($values as &$value) {
+                    // Decode checkbox arrays
+                    if ($value['field_type'] === 'checkbox' && !empty($value['field_value'])) {
+                        $decoded = json_decode($value['field_value'], true);
+                        if ($decoded !== null) {
+                            $value['field_value'] = $decoded;
+                        }
+                    }
+                    
+                    // Decode field options
+                    if (!empty($value['field_options'])) {
+                        $decoded = json_decode($value['field_options'], true);
+                        if ($decoded !== null) {
+                            $value['field_options'] = $decoded;
+                        }
+                    }
+                }
+            }
+            
+            return $values ?: [];
+            
+        } catch (Exception $e) {
+            logError('Ticket', 'Failed to get field values', [
+                'ticket_id' => $ticketId,
+                'error' => $e->getMessage()
+            ]);
+            return [];
         }
     }
 }

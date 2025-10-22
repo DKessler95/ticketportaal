@@ -1,26 +1,109 @@
 /* ===================================
    ICT Ticketportaal - Custom Styles
+   Kruit & Kramer Huisstijl
    =================================== */
+
+/* Bootstrap Grid Overrides for Fixed Sidebar */
+@media (min-width: 768px) {
+    .sidebar.col-md-3,
+    .sidebar.col-lg-2 {
+        flex: 0 0 250px;
+        max-width: 250px;
+    }
+    
+    main.col-md-9,
+    main.col-lg-10 {
+        flex: 1;
+        max-width: calc(100% - 250px);
+        margin-left: 250px;
+    }
+}
+
+/* Bootstrap Color Overrides */
+.bg-primary {
+    background-color: var(--primary-orange) !important;
+}
+
+.text-primary {
+    color: var(--primary-orange) !important;
+}
+
+.border-primary {
+    border-color: var(--primary-orange) !important;
+}
+
+.navbar-dark {
+    background-color: var(--primary-blue) !important;
+}
+
+.badge.bg-primary {
+    background-color: var(--primary-orange) !important;
+}
+
+.btn-outline-primary {
+    color: var(--primary-orange);
+    border-color: var(--primary-orange);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-orange);
+    border-color: var(--primary-orange);
+    color: white;
+}
+
+.link-primary {
+    color: var(--primary-orange) !important;
+}
+
+.link-primary:hover {
+    color: var(--primary-orange-dark) !important;
+}
+
+/* List Group Items */
+.list-group-item-action {
+    transition: all 0.2s ease;
+}
+
+.list-group-item-action:hover {
+    background-color: rgba(255, 107, 53, 0.05);
+    border-left: 3px solid var(--primary-orange);
+    padding-left: calc(1rem - 3px);
+}
+
+.list-group-item i {
+    width: 24px;
+    text-align: center;
+    margin-right: 0.5rem;
+    color: var(--primary-orange);
+}
 
 /* ===================================
    1. CSS Variables & Color Scheme
+   Kruit & Kramer Huisstijl
    =================================== */
 :root {
-    /* Primary Colors */
-    --primary-blue: #0066cc;
-    --primary-blue-dark: #0052a3;
-    --primary-blue-light: #3385d6;
+    /* Primary Colors - Kruit & Kramer */
+    --primary-orange: #FF6B35;
+    --primary-orange-dark: #E55A2B;
+    --primary-orange-light: #FF8555;
+    --primary-blue: #004E89;
+    --primary-blue-dark: #003D6E;
+    --primary-blue-light: #1A6BA8;
+    
+    /* Accent Colors */
+    --accent-teal: #1A7F8E;
+    --accent-yellow: #FFB627;
     
     /* Status Colors */
     --success-green: #28a745;
-    --warning-yellow: #ffc107;
+    --warning-yellow: #FFB627;
     --danger-red: #dc3545;
-    --info-blue: #17a2b8;
+    --info-blue: #1A7F8E;
     
     /* Priority Colors */
     --priority-low: #6c757d;
-    --priority-medium: #ffc107;
-    --priority-high: #fd7e14;
+    --priority-medium: #FFB627;
+    --priority-high: #FF6B35;
     --priority-urgent: #dc3545;
     
     /* Neutral Colors */
@@ -28,6 +111,7 @@
     --gray-200: #e9ecef;
     --gray-300: #dee2e6;
     --gray-600: #6c757d;
+    --gray-700: #495057;
     --gray-800: #343a40;
     --gray-900: #212529;
     
@@ -80,43 +164,140 @@ body {
    4. Sidebar Navigation
    =================================== */
 .sidebar {
-    position: sticky;
-    top: var(--header-height);
-    height: calc(100vh - var(--header-height));
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 2px 0 5px rgba(0,0,0,0.05);
     padding: 0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+    z-index: 1000;
+    will-change: auto;
+}
+
+.sidebar .logo-container {
+    padding: 1.5rem 1rem;
+    border-bottom: 2px solid var(--gray-200);
+    background-color: white;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar .logo-container a {
+    display: block;
+    width: 140px;
+    height: 60px;
+}
+
+.sidebar .logo-container img {
+    width: 140px;
+    height: auto;
+    max-height: 60px;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.sidebar .logo-container img:hover {
+    transform: scale(1.05);
+}
+
+.sidebar .position-sticky {
+    position: relative;
+}
+
+/* Custom Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
 }
 
 .sidebar .nav-link {
     color: var(--gray-800);
     padding: 0.75rem 1rem;
-    margin: 0.125rem 0.5rem;
-    border-radius: 0.375rem;
-    transition: all 0.2s ease;
+    margin: 0.125rem 0.75rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     font-weight: 500;
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
 }
 
 .sidebar .nav-link:hover {
-    background-color: var(--gray-200);
-    color: var(--primary-blue);
+    background-color: rgba(255, 107, 53, 0.1);
+    color: var(--primary-orange);
 }
 
 .sidebar .nav-link.active {
-    background-color: var(--primary-blue);
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-orange-light) 100%);
     color: white;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.sidebar .nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background-color: white;
+    border-radius: 0 4px 4px 0;
 }
 
 .sidebar .nav-link i {
-    width: 20px;
+    width: 24px;
+    min-width: 24px;
     text-align: center;
+    display: inline-block;
+}
+
+.sidebar .nav-link.text-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--danger-red);
 }
 
 .sidebar-heading {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--primary-blue);
+    padding: 0.5rem 0.75rem;
+    margin: 0;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar hr {
+    margin: 0.75rem 0;
+    opacity: 0.1;
+}
+
+.sidebar .nav {
+    padding: 0.5rem 0;
 }
 
 /* ===================================
@@ -124,6 +305,13 @@ body {
    =================================== */
 main {
     padding: 2rem;
+    margin-left: 250px;
+    min-height: 100vh;
+}
+
+main.col-md-9,
+main.col-lg-10 {
+    margin-left: 0;
 }
 
 .page-header {
@@ -164,6 +352,42 @@ main {
     border-bottom: 2px solid var(--gray-200);
     font-weight: 600;
     padding: 1rem 1.25rem;
+}
+
+/* Statistics Cards */
+.card.bg-primary {
+    background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-orange-light) 100%) !important;
+}
+
+.card.bg-warning {
+    background: linear-gradient(135deg, var(--warning-yellow) 0%, #FFD700 100%) !important;
+}
+
+.card.bg-danger {
+    background: linear-gradient(135deg, var(--danger-red) 0%, #FF6B6B 100%) !important;
+}
+
+.card.bg-success {
+    background: linear-gradient(135deg, var(--success-green) 0%, #48BB78 100%) !important;
+}
+
+.card.bg-info {
+    background: linear-gradient(135deg, var(--info-blue) 0%, #4299E1 100%) !important;
+}
+
+.card.text-white .card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.card.text-white .display-4 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .stat-card {
@@ -268,8 +492,8 @@ main {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
 }
 
 /* Validation States */
@@ -316,13 +540,25 @@ main {
 }
 
 .btn-primary {
-    background-color: var(--primary-blue);
-    border-color: var(--primary-blue);
+    background-color: var(--primary-orange);
+    border-color: var(--primary-orange);
 }
 
 .btn-primary:hover {
+    background-color: var(--primary-orange-dark);
+    border-color: var(--primary-orange-dark);
+}
+
+.btn-secondary {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: white;
+}
+
+.btn-secondary:hover {
     background-color: var(--primary-blue-dark);
     border-color: var(--primary-blue-dark);
+    color: white;
 }
 
 .btn-sm {
@@ -379,7 +615,7 @@ main {
 .ticket-number {
     font-family: 'Courier New', monospace;
     font-weight: 700;
-    color: var(--primary-blue);
+    color: var(--primary-orange);
 }
 
 /* ===================================
@@ -442,7 +678,7 @@ main {
 
 .file-upload-label:hover {
     background-color: var(--gray-300);
-    border-color: var(--primary-blue);
+    border-color: var(--primary-orange);
 }
 
 .file-preview {
@@ -542,8 +778,23 @@ main {
 
 /* Mobile (< 768px) */
 @media (max-width: 767.98px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -250px;
+        width: 250px;
+        height: 100vh;
+        transition: left 0.3s ease;
+        z-index: 1050;
+    }
+    
+    .sidebar.show {
+        left: 0;
+    }
+    
     main {
         padding: 1rem;
+        margin-left: 0;
     }
     
     .page-header h1 {
@@ -556,12 +807,6 @@ main {
     
     .table {
         font-size: 0.875rem;
-    }
-    
-    .sidebar {
-        position: relative;
-        height: auto;
-        top: 0;
     }
     
     .card {
@@ -580,12 +825,13 @@ main {
 
 /* Tablet (768px - 1024px) */
 @media (min-width: 768px) and (max-width: 1024px) {
-    main {
-        padding: 1.5rem;
+    .sidebar {
+        width: 250px;
     }
     
-    .sidebar {
-        width: 200px;
+    main {
+        padding: 1.5rem;
+        margin-left: 250px;
     }
     
     .stat-card .stat-value {
@@ -612,7 +858,7 @@ main {
 }
 
 .border-left-primary {
-    border-left: 4px solid var(--primary-blue) !important;
+    border-left: 4px solid var(--primary-orange) !important;
 }
 
 .border-left-success {

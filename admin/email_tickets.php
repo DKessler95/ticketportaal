@@ -107,17 +107,22 @@ if (is_array($emailTickets)) {
 
 // Page title
 $pageTitle = 'Email Tickets Beheer';
-
-// Include header
-include __DIR__ . '/../includes/header.php';
 ?>
-
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo escapeOutput($pageTitle . ' - ' . SITE_NAME); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
+</head>
+<body>
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
         <?php include __DIR__ . '/../includes/sidebar.php'; ?>
         
-        <!-- Main Content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">

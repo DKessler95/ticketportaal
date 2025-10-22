@@ -92,98 +92,57 @@ $pageTitle = 'My Tickets';
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo SITE_URL; ?>/user/dashboard.php">
-                <i class="bi bi-ticket-perforated"></i> <?php echo escapeOutput(SITE_NAME); ?>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/dashboard.php">
-                            <i class="bi bi-house-door"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="<?php echo SITE_URL; ?>/user/my_tickets.php">
-                            <i class="bi bi-list-ul"></i> My Tickets
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/create_ticket.php">
-                            <i class="bi bi-plus-circle"></i> Create Ticket
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/knowledge_base.php">
-                            <i class="bi bi-book"></i> Knowledge Base
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?php echo escapeOutput($userName); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout.php">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4 mb-5">
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1><i class="bi bi-list-ul"></i> My Tickets</h1>
+            <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"><i class="bi bi-list-task"></i> Mijn Tickets</h1>
                     <a href="<?php echo SITE_URL; ?>/user/create_ticket.php" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Create New Ticket
+                        <i class="bi bi-plus-circle"></i> Nieuw Ticket Aanmaken
                     </a>
                 </div>
+
+    <div class="container-fluid mt-4 mb-5">
+        <div class="row">
+            <div class="col-12">
 
                 <!-- Filters -->
                 <div class="card mb-4">
                     <div class="card-body">
                         <form method="GET" action="" class="row g-3">
                             <div class="col-md-3">
-                                <label for="status" class="form-label">Filter by Status</label>
+                                <label for="status" class="form-label">Filter op Status</label>
                                 <select class="form-select" id="status" name="status" onchange="this.form.submit()">
-                                    <option value="">All Statuses</option>
+                                    <option value="">Alle Statussen</option>
                                     <option value="open" <?php echo $filterStatus === 'open' ? 'selected' : ''; ?>>Open</option>
-                                    <option value="in_progress" <?php echo $filterStatus === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                                    <option value="pending" <?php echo $filterStatus === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="resolved" <?php echo $filterStatus === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
-                                    <option value="closed" <?php echo $filterStatus === 'closed' ? 'selected' : ''; ?>>Closed</option>
+                                    <option value="in_progress" <?php echo $filterStatus === 'in_progress' ? 'selected' : ''; ?>>In Behandeling</option>
+                                    <option value="pending" <?php echo $filterStatus === 'pending' ? 'selected' : ''; ?>>Wachtend</option>
+                                    <option value="resolved" <?php echo $filterStatus === 'resolved' ? 'selected' : ''; ?>>Opgelost</option>
+                                    <option value="closed" <?php echo $filterStatus === 'closed' ? 'selected' : ''; ?>>Gesloten</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="sort" class="form-label">Sort By</label>
+                                <label for="sort" class="form-label">Sorteren Op</label>
                                 <select class="form-select" id="sort" name="sort" onchange="this.form.submit()">
-                                    <option value="created_at" <?php echo $sortBy === 'created_at' ? 'selected' : ''; ?>>Date Created</option>
+                                    <option value="created_at" <?php echo $sortBy === 'created_at' ? 'selected' : ''; ?>>Aanmaakdatum</option>
                                     <option value="status" <?php echo $sortBy === 'status' ? 'selected' : ''; ?>>Status</option>
-                                    <option value="priority" <?php echo $sortBy === 'priority' ? 'selected' : ''; ?>>Priority</option>
-                                    <option value="ticket_number" <?php echo $sortBy === 'ticket_number' ? 'selected' : ''; ?>>Ticket Number</option>
+                                    <option value="priority" <?php echo $sortBy === 'priority' ? 'selected' : ''; ?>>Prioriteit</option>
+                                    <option value="ticket_number" <?php echo $sortBy === 'ticket_number' ? 'selected' : ''; ?>>Ticketnummer</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="order" class="form-label">Order</label>
+                                <label for="order" class="form-label">Volgorde</label>
                                 <select class="form-select" id="order" name="order" onchange="this.form.submit()">
-                                    <option value="desc" <?php echo $sortOrder === 'desc' ? 'selected' : ''; ?>>Descending</option>
-                                    <option value="asc" <?php echo $sortOrder === 'asc' ? 'selected' : ''; ?>>Ascending</option>
+                                    <option value="desc" <?php echo $sortOrder === 'desc' ? 'selected' : ''; ?>>Aflopend</option>
+                                    <option value="asc" <?php echo $sortOrder === 'asc' ? 'selected' : ''; ?>>Oplopend</option>
                                 </select>
                             </div>
                             <div class="col-md-3 d-flex align-items-end">
                                 <?php if (!empty($filterStatus)): ?>
                                     <a href="<?php echo SITE_URL; ?>/user/my_tickets.php" class="btn btn-secondary w-100">
-                                        <i class="bi bi-x-circle"></i> Clear Filters
+                                        <i class="bi bi-x-circle"></i> Filters Wissen
                                     </a>
                                 <?php endif; ?>
                             </div>
@@ -196,7 +155,7 @@ $pageTitle = 'My Tickets';
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="bi bi-ticket-detailed"></i> 
-                            Showing <?php echo count($allTickets); ?> ticket(s)
+                            <?php echo count($allTickets); ?> ticket(s) weergegeven
                         </h5>
                     </div>
                     <div class="card-body">
@@ -204,10 +163,10 @@ $pageTitle = 'My Tickets';
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle"></i> 
                                 <?php if (!empty($filterStatus)): ?>
-                                    No tickets found with status "<?php echo escapeOutput($filterStatus); ?>".
+                                    Geen tickets gevonden met status "<?php echo escapeOutput($filterStatus); ?>".
                                 <?php else: ?>
-                                    You haven't created any tickets yet. 
-                                    <a href="<?php echo SITE_URL; ?>/user/create_ticket.php" class="alert-link">Create your first ticket</a>
+                                    Je hebt nog geen tickets aangemaakt. 
+                                    <a href="<?php echo SITE_URL; ?>/user/create_ticket.php" class="alert-link">Maak je eerste ticket aan</a>
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
@@ -224,12 +183,12 @@ $pageTitle = 'My Tickets';
                                                     <?php endif; ?>
                                                 </a>
                                             </th>
-                                            <th>Title</th>
-                                            <th>Category</th>
+                                            <th>Titel</th>
+                                            <th>Categorie</th>
                                             <th>
                                                 <a href="?sort=priority&order=<?php echo ($sortBy === 'priority' && $sortOrder === 'asc') ? 'desc' : 'asc'; ?><?php echo !empty($filterStatus) ? '&status=' . $filterStatus : ''; ?>" 
                                                    class="text-decoration-none text-dark">
-                                                    Priority 
+                                                    Prioriteit 
                                                     <?php if ($sortBy === 'priority'): ?>
                                                         <i class="bi bi-arrow-<?php echo $sortOrder === 'asc' ? 'up' : 'down'; ?>"></i>
                                                     <?php endif; ?>
@@ -247,20 +206,22 @@ $pageTitle = 'My Tickets';
                                             <th>
                                                 <a href="?sort=created_at&order=<?php echo ($sortBy === 'created_at' && $sortOrder === 'asc') ? 'desc' : 'asc'; ?><?php echo !empty($filterStatus) ? '&status=' . $filterStatus : ''; ?>" 
                                                    class="text-decoration-none text-dark">
-                                                    Created 
+                                                    Aangemaakt 
                                                     <?php if ($sortBy === 'created_at'): ?>
                                                         <i class="bi bi-arrow-<?php echo $sortOrder === 'asc' ? 'up' : 'down'; ?>"></i>
                                                     <?php endif; ?>
                                                 </a>
                                             </th>
-                                            <th>Action</th>
+                                            <th>Actie</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($allTickets as $ticket): ?>
                                             <tr>
                                                 <td>
-                                                    <strong><?php echo escapeOutput($ticket['ticket_number']); ?></strong>
+                                                    <a href="<?php echo SITE_URL; ?>/user/ticket_detail.php?id=<?php echo $ticket['ticket_id']; ?>" class="text-decoration-none">
+                                                        <strong><?php echo escapeOutput($ticket['ticket_number']); ?></strong>
+                                                    </a>
                                                 </td>
                                                 <td>
                                                     <?php 
@@ -275,7 +236,7 @@ $pageTitle = 'My Tickets';
                                                 <td>
                                                     <a href="<?php echo SITE_URL; ?>/user/ticket_detail.php?id=<?php echo $ticket['ticket_id']; ?>" 
                                                        class="btn btn-sm btn-outline-primary">
-                                                        <i class="bi bi-eye"></i> View
+                                                        <i class="bi bi-eye"></i> Bekijken
                                                     </a>
                                                 </td>
                                             </tr>
@@ -290,11 +251,9 @@ $pageTitle = 'My Tickets';
         </div>
     </div>
 
-    <footer class="mt-5 py-3 bg-light">
-        <div class="container text-center">
-            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. All rights reserved.</p>
+            </main>
         </div>
-    </footer>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

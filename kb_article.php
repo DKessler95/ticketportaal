@@ -1,7 +1,9 @@
 <?php
-session_start();
-require_once __DIR__ . '/classes/KnowledgeBase.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/classes/KnowledgeBase.php';
+
+// Initialize session
+initSession();
 
 $kb = new KnowledgeBase();
 
@@ -22,8 +24,7 @@ if (!$article) {
 }
 
 // Check if article is published (unless user is agent or admin)
-$userRole = $_SESSION['role'] ?? 'guest';
-if (!$article['is_published'] && !in_array($userRole, ['agent', 'admin'])) {
+if (!$article['is_published'] && !checkRole(['agent', 'admin'])) {
     header('Location: knowledge_base.php');
     exit;
 }
@@ -48,44 +49,100 @@ if ($article['category_id']) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($article['title']); ?> - Knowledge Base</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .article-content {
+            line-height: 1.8;
+            font-size: 16px;
+        }
+        .article-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .article-content h1, .article-content h2, .article-content h3 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .article-content h1 { font-size: 2rem; }
+        .article-content h2 { font-size: 1.75rem; }
+        .article-content h3 { font-size: 1.5rem; }
+        .article-content p {
+            margin-bottom: 15px;
+        }
+        .article-content ul, .article-content ol {
+            margin-bottom: 15px;
+            padding-left: 30px;
+        }
+        .article-content li {
+            margin-bottom: 8px;
+        }
+        .article-content code {
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .article-content pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .article-content blockquote {
+            border-left: 4px solid #0066cc;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #666;
+            font-style: italic;
+        }
+        .article-content table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+        }
+        .article-content table th,
+        .article-content table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .article-content table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.php">ICT Ticketportaal</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="knowledge_base.php">Back to Knowledge Base</a>
-                    </li>
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="<?php echo $_SESSION['role']; ?>/dashboard.php">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="logout.php">Logout</a>
-                        </li>
-                    <?php else: ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="login.php">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="register.php">Register</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-md-8">
+            <?php if (checkLogin()): ?>
+                <?php include __DIR__ . '/includes/sidebar.php'; ?>
+                <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <?php else: ?>
+                <main class="col-12">
+                    <div class="container mt-4">
+            <?php endif; ?>
+                    
+                    <!-- Back Button -->
+                    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3">
+                        <a href="knowledge_base.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left"></i> Terug naar Knowledge Base
+                        </a>
+                        <?php if (checkRole(['admin', 'agent'])): ?>
+                            <a href="admin/kb_edit.php?id=<?php echo $article['kb_id']; ?>" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Bewerken
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-9">
                 <!-- Article Content -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -112,7 +169,10 @@ if ($article['category_id']) {
                     </div>
                     <div class="card-body">
                         <div class="article-content">
-                            <?php echo nl2br(htmlspecialchars($article['content'])); ?>
+                            <?php 
+                            // Display HTML content (already sanitized when saved)
+                            echo $article['content']; 
+                            ?>
                         </div>
                         
                         <?php if (!empty($article['tags'])): ?>
@@ -152,14 +212,12 @@ if ($article['category_id']) {
                 <div class="card">
                     <div class="card-body text-center">
                         <p class="mb-2">Was this article helpful?</p>
-                        <p class="text-muted small">
-                            If you need further assistance, please 
-                            <?php if (isset($_SESSION['user_id'])): ?>
-                                <a href="user/create_ticket.php">create a ticket</a>
-                            <?php else: ?>
-                                <a href="login.php">login</a> to create a ticket
-                            <?php endif; ?>
-                        </p>
+                        <?php if (checkLogin()): ?>
+                            <p class="text-muted small">
+                                If you need further assistance, please 
+                                <a href="<?php echo SITE_URL; ?>/user/create_ticket.php">create a ticket</a>
+                            </p>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -199,18 +257,26 @@ if ($article['category_id']) {
                                 Create Support Ticket
                             </a>
                         <?php endif; ?>
-                        <?php if (in_array($userRole, ['agent', 'admin'])): ?>
-                            <a href="admin/knowledge_base.php?edit=<?php echo $article['kb_id']; ?>" 
-                               class="btn btn-outline-warning btn-sm w-100 mt-2">
-                                Edit Article
-                            </a>
-                        <?php endif; ?>
                     </div>
                 </div>
+                        </div>
+                        <?php if (checkLogin()): ?>
+                            <div class="col-lg-3">
+                                <!-- Sidebar space for logged in users -->
+                            </div>
+                        <?php else: ?>
+                            <div class="col-md-4">
+                                <!-- Sidebar space for guests -->
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </main>
             </div>
         </div>
-    </div>
+    <?php if (!checkLogin()): ?>
+        </div>
+    <?php endif; ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,41 +1,37 @@
 <?php
 /**
- * Password Hash Test Script
- * Test if password verification works correctly
+ * Password Hash Test
  */
 
-// The hash from the database
-$hash = '$2y$12$LQv3c1yycEir3LtJlTjkKuHPqVyJpbGlmKq7FZ8U9XvVkKvPX.Ks6';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-// Test passwords
-$passwords = [
-    'Admin123!',
-    'admin123!',
-    'Admin123',
-    'admin@kruit-en-kramer.nl'
-];
+echo "<h1>Password Hash Test</h1>";
 
-echo "<h2>Password Hash Verification Test</h2>";
-echo "<p>Testing hash: <code>" . htmlspecialchars($hash) . "</code></p>";
-echo "<hr>";
+// The password from seed.sql
+$password = 'Admin123!';
 
-foreach ($passwords as $password) {
-    $result = password_verify($password, $hash);
-    $status = $result ? '<span style="color: green;">✓ MATCH</span>' : '<span style="color: red;">✗ NO MATCH</span>';
-    echo "<p>Password: <strong>" . htmlspecialchars($password) . "</strong> - $status</p>";
-}
+// The hash from seed.sql
+$hashFromSeed = '$2y$12$LQv3c1yycEir3LtJlTjkKuHPqVyJpbGlmKq7FZ8U9XvVkKvPX.Ks6';
 
-echo "<hr>";
-echo "<h3>Generate New Hash</h3>";
-$newPassword = 'Admin123!';
-$newHash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-echo "<p>New hash for '$newPassword':</p>";
-echo "<code>" . htmlspecialchars($newHash) . "</code>";
+echo "<h2>Test 1: Verify seed hash</h2>";
+echo "<p>Password: <code>$password</code></p>";
+echo "<p>Hash from seed: <code>$hashFromSeed</code></p>";
 
-echo "<hr>";
-echo "<h3>Database Connection Test</h3>";
+$result = password_verify($password, $hashFromSeed);
+echo "<p>Result: " . ($result ? "<strong style='color: green;'>✓ MATCH</strong>" : "<strong style='color: red;'>✗ NO MATCH</strong>") . "</p>";
 
-require_once __DIR__ . '/config/database.php';
+// Generate a new hash
+echo "<hr><h2>Test 2: Generate new hash</h2>";
+$newHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+echo "<p>New hash: <code>$newHash</code></p>";
+
+$result2 = password_verify($password, $newHash);
+echo "<p>Verify new hash: " . ($result2 ? "<strong style='color: green;'>✓ MATCH</strong>" : "<strong style='color: red;'>✗ NO MATCH</strong>") . "</p>";
+
+// Check database
+echo "<hr><h2>Test 3: Check database hash</h2>";
+require_once 'config/database.php';
 
 try {
     $pdo = new PDO(
@@ -45,39 +41,48 @@ try {
         DB_OPTIONS
     );
     
-    echo "<p style='color: green;'>✓ Database connection successful</p>";
-    
-    // Fetch admin user
-    $stmt = $pdo->prepare("SELECT user_id, email, password, first_name, last_name, role, is_active FROM users WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT password FROM users WHERE email = ?");
     $stmt->execute(['admin@kruit-en-kramer.nl']);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($user) {
-        echo "<h4>Admin User Found:</h4>";
-        echo "<ul>";
-        echo "<li>User ID: " . $user['user_id'] . "</li>";
-        echo "<li>Email: " . htmlspecialchars($user['email']) . "</li>";
-        echo "<li>Name: " . htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) . "</li>";
-        echo "<li>Role: " . htmlspecialchars($user['role']) . "</li>";
-        echo "<li>Active: " . ($user['is_active'] ? 'Yes' : 'No') . "</li>";
-        echo "<li>Password Hash: <code>" . htmlspecialchars($user['password']) . "</code></li>";
-        echo "</ul>";
+        echo "<p>Hash from database: <code>" . htmlspecialchars($user['password']) . "</code></p>";
         
-        // Test password verification with database hash
-        echo "<h4>Password Verification with Database Hash:</h4>";
-        $testPassword = 'Admin123!';
-        $verified = password_verify($testPassword, $user['password']);
-        if ($verified) {
-            echo "<p style='color: green; font-weight: bold;'>✓ Password '$testPassword' VERIFIED successfully!</p>";
-        } else {
-            echo "<p style='color: red; font-weight: bold;'>✗ Password '$testPassword' FAILED verification</p>";
-            echo "<p>This means the hash in the database doesn't match the expected password.</p>";
+        $result3 = password_verify($password, $user['password']);
+        echo "<p>Verify database hash: " . ($result3 ? "<strong style='color: green;'>✓ MATCH</strong>" : "<strong style='color: red;'>✗ NO MATCH</strong>") . "</p>";
+        
+        // Compare hashes
+        echo "<hr><h2>Test 4: Compare hashes</h2>";
+        echo "<p>Seed hash matches DB hash: " . ($hashFromSeed === $user['password'] ? "<strong style='color: green;'>✓ YES</strong>" : "<strong style='color: red;'>✗ NO</strong>") . "</p>";
+        
+        // Show hash details
+        echo "<hr><h2>Test 5: Hash details</h2>";
+        echo "<p>Seed hash length: " . strlen($hashFromSeed) . "</p>";
+        echo "<p>DB hash length: " . strlen($user['password']) . "</p>";
+        
+        // Character by character comparison
+        if ($hashFromSeed !== $user['password']) {
+            echo "<h3>Character differences:</h3>";
+            $maxLen = max(strlen($hashFromSeed), strlen($user['password']));
+            for ($i = 0; $i < $maxLen; $i++) {
+                $seedChar = isset($hashFromSeed[$i]) ? $hashFromSeed[$i] : 'MISSING';
+                $dbChar = isset($user['password'][$i]) ? $user['password'][$i] : 'MISSING';
+                if ($seedChar !== $dbChar) {
+                    echo "<p>Position $i: Seed='$seedChar' DB='$dbChar'</p>";
+                }
+            }
         }
+        
+        // Try updating with new hash
+        echo "<hr><h2>Test 6: Update with new hash</h2>";
+        echo "<p>Would you like to update the database with a new working hash?</p>";
+        echo "<p><a href='fix_password.php'>Click here to fix the password</a></p>";
+        
     } else {
-        echo "<p style='color: red;'>✗ Admin user not found in database</p>";
+        echo "<p style='color: red;'>User not found in database</p>";
     }
     
 } catch (PDOException $e) {
-    echo "<p style='color: red;'>✗ Database connection failed: " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p style='color: red;'>Database error: " . $e->getMessage() . "</p>";
 }
 ?>

@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../classes/User.php';
 require_once __DIR__ . '/../classes/Ticket.php';
 require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/TemplateParser.php';
 
 // Initialize session and check authentication
 initSession();
@@ -47,6 +48,24 @@ if ($ticket['user_id'] != $userId) {
 // Get comments (only public comments for users)
 $comments = $ticketClass->getComments($ticketId, false);
 
+// Get templates for comments (only comment type, not resolution)
+$templates = $db->fetchAll("SELECT * FROM ticket_templates WHERE is_active = 1 AND template_type = 'comment' ORDER BY name");
+
+// Get user data for template parsing
+$ticketUser = $db->fetchOne("SELECT * FROM users WHERE user_id = ?", [$ticket['user_id']]);
+
+// Get agent data for template parsing
+$ticketAgent = null;
+if (!empty($ticket['assigned_agent_id'])) {
+    $ticketAgent = $db->fetchOne("SELECT * FROM users WHERE user_id = ?", [$ticket['assigned_agent_id']]);
+}
+
+// Parse templates with ticket data
+foreach ($templates as &$template) {
+    $template['content'] = TemplateParser::parse($template['content'], $ticket, $ticketUser, $ticketAgent);
+}
+unset($template); // Break reference
+
 // Get attachments
 $attachments = $ticketClass->getAttachments($ticketId);
 
@@ -63,7 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($_POST['action'] === 'add_comment') {
             $comment = $_POST['comment'] ?? '';
             
-            if (empty(trim($comment))) {
+            // Strip tags to get plain text for validation
+            $plainComment = strip_tags($comment);
+            
+            if (empty(trim($plainComment))) {
                 $errors[] = 'Comment cannot be empty';
             } else {
                 $commentId = $ticketClass->addComment($ticketId, $userId, $comment, false);
@@ -72,20 +94,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $success = 'Comment added successfully';
                     // Refresh comments
                     $comments = $ticketClass->getComments($ticketId, false);
-                    // TODO: Send notification email (will be implemented in task 9)
+                    // Clear POST data to prevent resubmission
+                    header("Location: " . $_SERVER['REQUEST_URI']);
+                    exit;
                 } else {
                     $errors[] = $ticketClass->getError() ?: 'Failed to add comment';
                 }
             }
+        } elseif ($_POST['action'] === 'mark_resolved') {
+            // User marks ticket as resolved
+            $result = $ticketClass->updateStatus($ticketId, 'resolved', 'Marked as resolved by user');
+            
+            if ($result) {
+                $success = 'Ticket marked as resolved';
+                // Refresh ticket data
+                $ticket = $ticketClass->getTicketById($ticketId);
+            } else {
+                $errors[] = $ticketClass->getError() ?: 'Failed to update ticket status';
+            }
         } elseif ($_POST['action'] === 'submit_rating') {
             $rating = filter_var($_POST['rating'] ?? 0, FILTER_VALIDATE_INT);
+            $reviewComment = $_POST['review_comment'] ?? '';
             
             if ($rating < 1 || $rating > 5) {
                 $errors[] = 'Please select a valid rating (1-5 stars)';
             } else {
-                // Update ticket with satisfaction rating and close it
-                $sql = "UPDATE tickets SET satisfaction_rating = ?, status = 'closed' WHERE ticket_id = ?";
-                $result = $db->execute($sql, [$rating, $ticketId]);
+                // Update ticket with satisfaction rating, comment and close it
+                $sql = "UPDATE tickets SET satisfaction_rating = ?, satisfaction_comment = ?, status = 'closed' WHERE ticket_id = ?";
+                $result = $db->execute($sql, [$rating, $reviewComment, $ticketId]);
                 
                 if ($result) {
                     $success = 'Thank you for your feedback! The ticket has been closed.';
@@ -110,13 +146,14 @@ $pageTitle = 'Ticket Details';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
+    <script src="https://cdn.tiny.cloud/1/f5xc5i53b0di57yjmcf5954fyhbtmb9k28r3pu0nn19ol86c/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <style>
         .comment-box {
-            border-left: 3px solid #0066cc;
+            border-left: 3px solid #FF6B35;
             background-color: #f8f9fa;
         }
         .comment-internal {
-            border-left-color: #ffc107;
+            border-left-color: #FFB627;
             background-color: #fff3cd;
         }
         .star-rating {
@@ -125,63 +162,20 @@ $pageTitle = 'Ticket Details';
             cursor: pointer;
         }
         .star-rating .bi-star-fill {
-            color: #ffc107;
+            color: #FFB627;
         }
         .star-rating .bi-star:hover,
         .star-rating .bi-star-fill:hover {
-            color: #ffb300;
+            color: #FF6B35;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="<?php echo SITE_URL; ?>/user/dashboard.php">
-                <i class="bi bi-ticket-perforated"></i> <?php echo escapeOutput(SITE_NAME); ?>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/dashboard.php">
-                            <i class="bi bi-house-door"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/my_tickets.php">
-                            <i class="bi bi-list-ul"></i> My Tickets
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/user/create_ticket.php">
-                            <i class="bi bi-plus-circle"></i> Create Ticket
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?php echo SITE_URL; ?>/knowledge_base.php">
-                            <i class="bi bi-book"></i> Knowledge Base
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?php echo escapeOutput($userName); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout.php">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4 mb-5">
+    <div class="container-fluid">
+        <div class="row">
+            <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+            
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-4 mb-5">
         <div class="row">
             <div class="col-12">
                 <nav aria-label="breadcrumb">
@@ -256,6 +250,57 @@ $pageTitle = 'Ticket Details';
                     </div>
                 </div>
 
+                <!-- Dynamic Field Values -->
+                <?php
+                $fieldValues = $ticketClass->getFieldValues($ticketId);
+                if (!empty($fieldValues)):
+                ?>
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Aanvullende Informatie</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <?php foreach ($fieldValues as $field): ?>
+                                    <dt class="col-sm-4"><?php echo escapeOutput($field['field_label']); ?></dt>
+                                    <dd class="col-sm-8">
+                                        <?php
+                                        // Format value based on field type
+                                        $value = $field['field_value'];
+                                        
+                                        switch ($field['field_type']) {
+                                            case 'checkbox':
+                                                if (is_array($value)) {
+                                                    echo escapeOutput(implode(', ', $value));
+                                                } else {
+                                                    echo $value ? 'Ja' : 'Nee';
+                                                }
+                                                break;
+                                                
+                                            case 'date':
+                                                $date = DateTime::createFromFormat('Y-m-d', $value);
+                                                echo $date ? $date->format('d-m-Y') : escapeOutput($value);
+                                                break;
+                                                
+                                            case 'email':
+                                                echo '<a href="mailto:' . escapeOutput($value) . '">' . escapeOutput($value) . '</a>';
+                                                break;
+                                                
+                                            case 'tel':
+                                                echo '<a href="tel:' . escapeOutput($value) . '">' . escapeOutput($value) . '</a>';
+                                                break;
+                                                
+                                            default:
+                                                echo escapeOutput($value);
+                                        }
+                                        ?>
+                                    </dd>
+                                <?php endforeach; ?>
+                            </dl>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <!-- Attachments -->
                 <?php if (!empty($attachments)): ?>
                     <div class="card mb-4">
@@ -308,7 +353,7 @@ $pageTitle = 'Ticket Details';
                                         </div>
                                         <small class="text-muted"><?php echo formatDate($comment['created_at']); ?></small>
                                     </div>
-                                    <p class="mb-0 text-break"><?php echo nl2br(escapeOutput($comment['comment'])); ?></p>
+                                    <div class="mb-0 text-break"><?php echo $comment['comment']; ?></div>
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -317,21 +362,44 @@ $pageTitle = 'Ticket Details';
                         <?php if ($ticket['status'] !== 'closed'): ?>
                             <hr>
                             <h6>Add a Comment</h6>
-                            <form method="POST" action="">
+                            <form method="POST" action="" id="commentForm">
                                 <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                                 <input type="hidden" name="action" value="add_comment">
                                 
+                                <?php if (!empty($templates)): ?>
+                                <div class="mb-2">
+                                    <label class="form-label">Sjabloon gebruiken (optioneel)</label>
+                                    <select class="form-select" id="templateSelect" onchange="loadTemplate(this.value)">
+                                        <option value="">-- Selecteer sjabloon --</option>
+                                        <?php foreach ($templates as $tpl): ?>
+                                            <option value="<?php echo $tpl['template_id']; ?>" 
+                                                    data-content="<?php echo htmlspecialchars($tpl['content'], ENT_QUOTES); ?>">
+                                                <?php echo escapeOutput($tpl['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <?php endif; ?>
+                                
                                 <div class="mb-3">
                                     <textarea class="form-control" 
+                                              id="comment"
                                               name="comment" 
-                                              rows="4" 
-                                              placeholder="Type your comment here..."
-                                              required></textarea>
+                                              rows="8" 
+                                              placeholder="Type your comment here..."></textarea>
                                 </div>
                                 
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-send"></i> Add Comment
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send"></i> Add Comment
+                                    </button>
+                                    
+                                    <?php if ($ticket['status'] !== 'resolved' && $ticket['status'] !== 'closed'): ?>
+                                        <button type="button" class="btn btn-success" onclick="markAsResolved()">
+                                            <i class="bi bi-check-circle"></i> Mark as Resolved
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                             </form>
                         <?php else: ?>
                             <div class="alert alert-info mt-3 mb-0">
@@ -355,20 +423,30 @@ $pageTitle = 'Ticket Details';
                                 <input type="hidden" name="action" value="submit_rating">
                                 <input type="hidden" name="rating" id="ratingValue" value="0">
                                 
-                                <div class="star-rating mb-3" id="starRating">
-                                    <i class="bi bi-star" data-rating="1"></i>
-                                    <i class="bi bi-star" data-rating="2"></i>
-                                    <i class="bi bi-star" data-rating="3"></i>
-                                    <i class="bi bi-star" data-rating="4"></i>
-                                    <i class="bi bi-star" data-rating="5"></i>
+                                <div class="mb-3">
+                                    <label class="form-label"><strong>Rating:</strong></label>
+                                    <div class="star-rating" id="starRating">
+                                        <i class="bi bi-star" data-rating="1"></i>
+                                        <i class="bi bi-star" data-rating="2"></i>
+                                        <i class="bi bi-star" data-rating="3"></i>
+                                        <i class="bi bi-star" data-rating="4"></i>
+                                        <i class="bi bi-star" data-rating="5"></i>
+                                    </div>
+                                    <small class="text-muted">1 = Very Dissatisfied, 5 = Very Satisfied</small>
                                 </div>
                                 
-                                <p class="text-muted mb-3">
-                                    <small>1 = Very Dissatisfied, 5 = Very Satisfied</small>
-                                </p>
+                                <div class="mb-3">
+                                    <label for="review_comment" class="form-label"><strong>Your Feedback (Optional):</strong></label>
+                                    <textarea class="form-control" 
+                                              id="review_comment" 
+                                              name="review_comment" 
+                                              rows="4" 
+                                              placeholder="Tell us about your experience..."></textarea>
+                                    <small class="text-muted">Share your thoughts about the support you received</small>
+                                </div>
                                 
                                 <button type="submit" class="btn btn-success" id="submitRating" disabled>
-                                    <i class="bi bi-check-circle"></i> Submit Rating
+                                    <i class="bi bi-check-circle"></i> Submit Review
                                 </button>
                             </form>
                         </div>
@@ -376,15 +454,22 @@ $pageTitle = 'Ticket Details';
                 <?php elseif ($ticket['satisfaction_rating']): ?>
                     <div class="card mb-4 border-success">
                         <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="bi bi-star-fill"></i> Your Rating</h5>
+                            <h5 class="mb-0"><i class="bi bi-star-fill"></i> Your Review</h5>
                         </div>
                         <div class="card-body">
-                            <p>Thank you for rating this ticket!</p>
-                            <div class="star-rating">
+                            <p><strong>Rating:</strong></p>
+                            <div class="star-rating mb-3">
                                 <?php for ($i = 1; $i <= 5; $i++): ?>
                                     <i class="bi bi-star<?php echo $i <= $ticket['satisfaction_rating'] ? '-fill' : ''; ?>"></i>
                                 <?php endfor; ?>
                             </div>
+                            <?php if (!empty($ticket['satisfaction_comment'])): ?>
+                                <p><strong>Your Feedback:</strong></p>
+                                <div class="alert alert-light">
+                                    <?php echo nl2br(escapeOutput($ticket['satisfaction_comment'])); ?>
+                                </div>
+                            <?php endif; ?>
+                            <p class="text-muted mb-0"><small>Thank you for your feedback!</small></p>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -434,15 +519,114 @@ $pageTitle = 'Ticket Details';
             </div>
         </div>
     </div>
-
-    <footer class="mt-5 py-3 bg-light">
-        <div class="container text-center">
-            <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo escapeOutput(COMPANY_NAME); ?>. All rights reserved.</p>
+            </main>
         </div>
-    </footer>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- TinyMCE for Comments -->
+    <script src="https://cdn.tiny.cloud/1/f5xc5i53b0di57yjmcf5954fyhbtmb9k28r3pu0nn19ol86c/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
+        // Initialize TinyMCE for comment field
+        <?php if ($ticket['status'] !== 'closed'): ?>
+        let commentEditor;
+        tinymce.init({
+            selector: '#comment',
+            height: 300,
+            menubar: false,
+            plugins: ['lists', 'link', 'code', 'table'],
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | removeformat code',
+            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; }',
+            branding: false,
+            promotion: false,
+            statusbar: false,
+            resize: true,
+            init_instance_callback: function(editor) {
+                commentEditor = editor;
+            }
+        });
+        
+        // Handle form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('commentForm');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Get TinyMCE content
+                    if (commentEditor) {
+                        const content = commentEditor.getContent({format: 'text'}).trim();
+                        
+                        if (!content) {
+                            alert('Comment cannot be empty');
+                            return false;
+                        }
+                        
+                        // Save TinyMCE content to textarea
+                        commentEditor.save();
+                    }
+                    
+                    // Submit the form
+                    form.submit();
+                });
+            }
+        });
+        <?php endif; ?>
+        
+        // Initialize TinyMCE for comment field
+        <?php if ($ticket['status'] !== 'closed'): ?>
+        tinymce.init({
+            selector: '#comment',
+            height: 250,
+            menubar: false,
+            plugins: ['lists', 'link'],
+            toolbar: 'undo redo | bold italic underline | bullist numlist | removeformat',
+            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; }',
+            branding: false,
+            promotion: false,
+            statusbar: false,
+            resize: false,
+            setup: function(editor) {
+                editor.on('init', function() {
+                    document.getElementById('commentForm').addEventListener('submit', function(e) {
+                        tinymce.triggerSave();
+                        var content = tinymce.get('comment').getContent({format: 'text'}).trim();
+                        if (content === '') {
+                            e.preventDefault();
+                            alert('Please enter a comment before submitting.');
+                            return false;
+                        }
+                    });
+                });
+            }
+        });
+        <?php endif; ?>
+        
+        // Mark ticket as resolved
+        function markAsResolved() {
+            if (confirm('Are you sure you want to mark this ticket as resolved? This indicates that your issue has been fixed.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '';
+                
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = 'csrf_token';
+                csrfToken.value = '<?php echo generateCSRFToken(); ?>';
+                form.appendChild(csrfToken);
+                
+                const action = document.createElement('input');
+                action.type = 'hidden';
+                action.name = 'action';
+                action.value = 'mark_resolved';
+                form.appendChild(action);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
         // Star rating functionality
         const stars = document.querySelectorAll('#starRating i');
         const ratingValue = document.getElementById('ratingValue');
@@ -487,6 +671,29 @@ $pageTitle = 'Ticket Details';
                     });
                 });
             });
+        }
+        
+        // Load template into comment textarea
+        function loadTemplate(templateId) {
+            if (!templateId) return;
+            
+            const select = document.getElementById('templateSelect');
+            const option = select.options[select.selectedIndex];
+            const content = option.getAttribute('data-content');
+            
+            if (content) {
+                // Strip HTML tags from template content
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                
+                // Check if TinyMCE is initialized
+                if (tinymce.get('comment')) {
+                    tinymce.get('comment').setContent(textContent);
+                } else {
+                    document.getElementById('comment').value = textContent;
+                }
+            }
         }
     </script>
 </body>
