@@ -19,5 +19,11 @@ python-multipart==0.0.6
 # Database Connectivity
 mysql-connector-python==8.2.0
 
+# NER and Entity Extraction
+spacy>=3.7.0
+
+# Knowledge Graph
+networkx>=3.2.0
+
 # Utilities
 python-dotenv==1.0.0
