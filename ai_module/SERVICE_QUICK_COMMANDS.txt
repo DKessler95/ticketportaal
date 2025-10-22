@@ -1,0 +1,81 @@
+================================================================================
+OLLAMA WINDOWS SERVICE - QUICK COMMAND REFERENCE
+================================================================================
+
+INSTALLATION (Run as Administrator)
+-----------------------------------
+cd ai_module\scripts
+download_nssm.bat
+install_ollama_service.bat
+
+TESTING (Run as Administrator)
+-------------------------------
+test_ollama_service.bat
+
+SERVICE MANAGEMENT - PowerShell
+--------------------------------
+Get-Service Ollama                    # Check status
+Start-Service Ollama                  # Start service
+Stop-Service Ollama                   # Stop service
+Restart-Service Ollama                # Restart service
+Get-Service Ollama | Format-List *    # Detailed info
+
+SERVICE MANAGEMENT - NSSM
+--------------------------
+cd ai_module\scripts
+.\nssm\win64\nssm.exe start Ollama    # Start
+.\nssm\win64\nssm.exe stop Ollama     # Stop
+.\nssm\win64\nssm.exe restart Ollama  # Restart
+.\nssm\win64\nssm.exe status Ollama   # Status
+.\nssm\win64\nssm.exe edit Ollama     # Edit config (GUI)
+
+SERVICE MANAGEMENT - Windows GUI
+---------------------------------
+Win + R → services.msc → Find "Ollama AI Service"
+
+VIEW LOGS
+---------
+Get-Content ai_module\logs\ollama_stdout.log -Tail 50
+Get-Content ai_module\logs\ollama_stderr.log -Tail 50
+Get-Content ai_module\logs\ollama_stdout.log -Wait -Tail 20  # Live
+
+TEST API
+--------
+Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method Get
+
+UNINSTALL SERVICE (Run as Administrator)
+-----------------------------------------
+uninstall_ollama_service.bat
+
+SERVICE DETAILS
+---------------
+Name:         Ollama
+Display:      Ollama AI Service
+Startup:      Automatic
+Recovery:     Restart on failure (60 second delay)
+Port:         11434
+Logs:         ai_module\logs\
+
+TROUBLESHOOTING
+---------------
+# Service won't start
+Get-Content ai_module\logs\ollama_stderr.log -Tail 50
+
+# Check if port in use
+netstat -ano | findstr :11434
+
+# Verify Ollama installed
+Test-Path "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe"
+
+# Reinstall service
+uninstall_ollama_service.bat
+install_ollama_service.bat
+
+DOCUMENTATION
+-------------
+Full Guide:       ai_module\OLLAMA_SERVICE_SETUP.md
+Quick Setup:      ai_module\QUICK_SERVICE_SETUP.md
+Scripts README:   ai_module\scripts\README.md
+Task Summary:     ai_module\TASK_3_SERVICE_SETUP_SUMMARY.md
+
+================================================================================

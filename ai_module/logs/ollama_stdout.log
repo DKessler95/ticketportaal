@@ -1,0 +1,8 @@
+Couldn't find 'C:\WINDOWS\system32\config\systemprofile\.ollama\id_ed25519'. Generating new private key.
+Your new public key is: 
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDZ7+dl/6I0Waq1/wHO/Tle6fzdPMtpofE0mkQ/SE+hi
+
+[GIN] 2025/10/22 - 04:27:59 | 200 |       503.8µs |             ::1 | GET      "/api/tags"
+[GIN] 2025/10/22 - 04:29:05 | 200 |            0s |             ::1 | GET      "/api/tags"
+[GIN] 2025/10/22 - 04:33:11 | 200 |        1.02ms |             ::1 | GET      "/api/tags"

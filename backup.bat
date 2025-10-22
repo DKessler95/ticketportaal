@@ -17,7 +17,7 @@ if not exist %BACKUP_DIR% mkdir %BACKUP_DIR%
 
 echo [1/3] Database backup maken...
 REM Database backup (pas gebruikersnaam en wachtwoord aan)
-C:\xampp\mysql\bin\mysqldump.exe -u root ticketportaal > %BACKUP_DIR%\db_%TIMESTAMP%.sql
+C:\Users\Damian\XAMPP\mysql\bin\mysqldump.exe -u root ticketportaal > %BACKUP_DIR%\db_%TIMESTAMP%.sql
 if %errorlevel% equ 0 (
     echo Database backup succesvol: db_%TIMESTAMP%.sql
 ) else (
