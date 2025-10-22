@@ -143,6 +143,9 @@ z# Implementation Plan
   - _Requirements: 3.1, 3.2_
 
 - [ ] 8. Implement Entity Extraction (NER)
+
+
+
   - Install spaCy and download nl_core_news_lg model
   - Create extract_entities() function for tickets
   - Extract: products, errors, locations, persons, organizations and other variables which are gonna be needed
