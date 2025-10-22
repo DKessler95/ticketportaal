@@ -62,7 +62,7 @@ if (checkLogin()) {
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="index.php">
-                <img src="<?php echo SITE_URL; ?>/assets/images/logo/logo-kruit-en-kramer.svg" 
+                <img src="<?php echo SITE_URL; ?>/assets/images/logo/Kruit/logo.svg" 
                      alt="Kruit & Kramer" 
                      style="max-height: 45px;">
             </a>
@@ -265,7 +265,7 @@ if (checkLogin()) {
         <div class="container">
             <div class="row text-white">
                 <div class="col-md-6 mb-4 mb-md-0">
-                    <img src="<?php echo SITE_URL; ?>/assets/images/logo/logo-kruit-en-kramer.svg" 
+                    <img src="<?php echo SITE_URL; ?>/assets/images/logo/Kruit/logo.svg" 
                          alt="Kruit & Kramer" 
                          class="mb-3" 
                          style="max-width: 180px; filter: brightness(0) invert(1);">

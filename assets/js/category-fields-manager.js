@@ -296,6 +296,13 @@ function deleteField(fieldId, fieldLabel) {
     formData.append('action', 'delete');
     formData.append('field_id', fieldId);
     
+    // Disable the delete button to prevent double-clicks
+    const deleteButton = event.target.closest('button');
+    if (deleteButton) {
+        deleteButton.disabled = true;
+        deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    }
+    
     fetch('../api/manage_category_field.php', {
         method: 'POST',
         body: formData
@@ -303,23 +310,51 @@ function deleteField(fieldId, fieldLabel) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Close modal
-            fieldManagementModal.hide();
-            
+            // Don't close modal - just reload the fields list
             showSuccess(data.message);
             
-            // Reload page to update counts
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+            // Reload fields for this category
+            loadCategoryFields(currentCategoryId);
+            
+            // Update the count badge on the main page
+            updateCategoryFieldCount(currentCategoryId);
         } else {
             showError(data.error);
+            // Re-enable button on error
+            if (deleteButton) {
+                deleteButton.disabled = false;
+                deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
+            }
         }
     })
     .catch(error => {
         console.error('Error deleting field:', error);
         showError('Fout bij verwijderen veld');
+        // Re-enable button on error
+        if (deleteButton) {
+            deleteButton.disabled = false;
+            deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
+        }
     });
+}
+
+/**
+ * Update category field count badge
+ */
+function updateCategoryFieldCount(categoryId) {
+    fetch(`../api/get_category_fields.php?category_id=${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.querySelector(`[data-category-id="${categoryId}"] .field-count-badge`);
+                if (badge) {
+                    badge.textContent = data.fields.length;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error updating count:', error);
+        });
 }
 
 /**

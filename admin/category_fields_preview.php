@@ -121,7 +121,7 @@ $pageTitle = 'Velden Preview - ' . $category['name'];
                                                     break;
                                                     
                                                 case 'select':
-                                                    $options = json_decode($field['field_options'], true) ?? [];
+                                                    $options = $field['field_options'] ?? [];
                                             ?>
                                                     <select class="form-select" 
                                                             id="<?php echo $fieldId; ?>" 
@@ -138,7 +138,7 @@ $pageTitle = 'Velden Preview - ' . $category['name'];
                                                     break;
                                                     
                                                 case 'radio':
-                                                    $options = json_decode($field['field_options'], true) ?? [];
+                                                    $options = $field['field_options'] ?? [];
                                                     foreach ($options as $index => $option):
                                             ?>
                                                         <div class="form-check">
@@ -157,7 +157,7 @@ $pageTitle = 'Velden Preview - ' . $category['name'];
                                                     break;
                                                     
                                                 case 'checkbox':
-                                                    $options = json_decode($field['field_options'], true) ?? [];
+                                                    $options = $field['field_options'] ?? [];
                                                     foreach ($options as $index => $option):
                                             ?>
                                                         <div class="form-check">

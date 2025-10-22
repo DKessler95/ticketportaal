@@ -704,3 +704,23 @@ function isActive($page, $folder = null) {
     
     return ($pageMatches && $folderMatches) ? 'active' : '';
 }
+
+
+/**
+ * Generate a random password
+ * 
+ * @param int $length Password length (default: 8)
+ * @return string Generated password
+ */
+function generateRandomPassword($length = 8) {
+    // Character set: letters and numbers only (no special characters)
+    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $charactersLength = strlen($characters);
+    $password = '';
+    
+    for ($i = 0; $i < $length; $i++) {
+        $password .= $characters[random_int(0, $charactersLength - 1)];
+    }
+    
+    return $password;
+}

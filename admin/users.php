@@ -92,6 +92,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errorMessage = 'Failed to reactivate user: ' . $userClass->getError();
                 }
                 break;
+                
+            case 'reset_password':
+                $targetUserId = (int)($_POST['user_id'] ?? 0);
+                
+                // Generate random password
+                $newPassword = generateRandomPassword(8);
+                
+                if ($userClass->resetPasswordByAdmin($targetUserId, $newPassword)) {
+                    // Store password in session to display with HTML
+                    $_SESSION['reset_password_success'] = $newPassword;
+                    $successMessage = 'PASSWORD_RESET_SUCCESS';
+                } else {
+                    $errorMessage = 'Failed to reset password: ' . $userClass->getError();
+                }
+                break;
         }
     }
 }
@@ -127,7 +142,16 @@ $pageTitle = 'User Management';
 
         <?php if ($successMessage): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle"></i> <?php echo escapeOutput($successMessage); ?>
+                <i class="bi bi-check-circle"></i> 
+                <?php 
+                if ($successMessage === 'PASSWORD_RESET_SUCCESS' && isset($_SESSION['reset_password_success'])) {
+                    $newPassword = $_SESSION['reset_password_success'];
+                    unset($_SESSION['reset_password_success']);
+                    echo 'Wachtwoord succesvol gereset! Nieuw wachtwoord: <strong>' . escapeOutput($newPassword) . '</strong> (Bewaar dit en deel het veilig met de gebruiker)';
+                } else {
+                    echo escapeOutput($successMessage);
+                }
+                ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -362,11 +386,19 @@ $pageTitle = 'User Management';
                                                                         </select>
                                                                     </div>
                                                                 </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
-                                                                    <button type="submit" class="btn btn-primary">
-                                                                        <i class="bi bi-save"></i> Wijzigingen Opslaan
-                                                                    </button>
+                                                                <div class="modal-footer d-flex justify-content-between">
+                                                                    <div>
+                                                                        <button type="button" class="btn btn-warning" 
+                                                                                onclick="resetUserPassword(<?php echo $user['user_id']; ?>)">
+                                                                            <i class="bi bi-key"></i> Wachtwoord Resetten
+                                                                        </button>
+                                                                    </div>
+                                                                    <div>
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
+                                                                        <button type="submit" class="btn btn-primary">
+                                                                            <i class="bi bi-save"></i> Wijzigingen Opslaan
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </form>
                                                         </div>
@@ -387,5 +419,41 @@ $pageTitle = 'User Management';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    function resetUserPassword(userId) {
+        if (confirm('Weet je zeker dat je het wachtwoord wilt resetten? Er wordt een nieuw willekeurig wachtwoord gegenereerd.')) {
+            // Create a form and submit it
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '';
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '<?php echo generateCSRFToken(); ?>';
+            form.appendChild(csrfInput);
+            
+            // Add action
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'reset_password';
+            form.appendChild(actionInput);
+            
+            // Add user_id
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'user_id';
+            userIdInput.value = userId;
+            form.appendChild(userIdInput);
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+    </script>
 </body>
 </html>

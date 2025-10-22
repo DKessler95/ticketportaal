@@ -301,6 +301,45 @@ class User {
     }
     
     /**
+     * Reset user password by admin
+     * 
+     * @param int $userId User ID
+     * @param string $newPassword New password (plain text)
+     * @return bool True on success, false on failure
+     */
+    public function resetPasswordByAdmin($userId, $newPassword) {
+        try {
+            // Hash the new password
+            $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+            
+            // Update password in database
+            $result = $this->db->execute(
+                "UPDATE users SET password = ? WHERE user_id = ?",
+                [$hashedPassword, $userId]
+            );
+            
+            if ($result) {
+                logError('Password Reset', 'Password reset by admin successfully', [
+                    'user_id' => $userId,
+                    'admin_id' => $_SESSION['user_id'] ?? null
+                ]);
+                return true;
+            }
+            
+            $this->error = 'Failed to reset password';
+            return false;
+            
+        } catch (Exception $e) {
+            $this->error = 'Password reset failed';
+            logError('Password Reset', 'Exception during password reset', [
+                'error' => $e->getMessage(),
+                'user_id' => $userId
+            ]);
+            return false;
+        }
+    }
+    
+    /**
      * Validate registration data
      * 
      * @param string $email Email address

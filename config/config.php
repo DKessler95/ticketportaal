@@ -11,7 +11,7 @@
 // For localhost development with port 8080, use http://localhost:8080/ticketportaal
 // For localhost default port 80, use http://localhost/ticketportaal
 // For production, use https://tickets.kruit-en-kramer.nl
-define('SITE_URL', 'http://localhost/ticketportaal');
+define('SITE_URL', 'http://localhost:8080/ticketportaal');
 
 // Site name
 define('SITE_NAME', 'ICT Ticketportaal');

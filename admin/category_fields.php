@@ -109,7 +109,7 @@ $pageTitle = 'Categorie Velden Beheer';
                     </div>
                 <?php else: ?>
                     <?php foreach ($categories as $category): ?>
-                        <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="col-md-6 col-lg-4 mb-4" data-category-id="<?php echo $category['category_id']; ?>">
                             <div class="card category-card h-100">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
