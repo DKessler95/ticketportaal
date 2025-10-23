@@ -142,7 +142,9 @@ z# Implementation Plan
   - Create Python NetworkX wrapper for graph operations
   - _Requirements: 3.1, 3.2_
 
-- [ ] 8. Implement Entity Extraction (NER)
+- [x] 8. Implement Entity Extraction (NER)
+
+
 
 
 
