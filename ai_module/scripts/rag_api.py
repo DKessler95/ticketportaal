@@ -49,11 +49,65 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
+# Lifespan context manager (replaces deprecated on_event)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    global hybrid_retrieval, reranker, service_stats
+    
+    # Startup
+    logger.info("="*60)
+    logger.info("Starting RAG API Service")
+    logger.info("="*60)
+    
+    service_stats['start_time'] = datetime.now()
+    
+    try:
+        # Initialize hybrid retrieval with Qdrant
+        logger.info("Initializing hybrid retrieval system...")
+        hybrid_retrieval = HybridRetrieval(
+            qdrant_host=CONFIG['qdrant_host'],
+            qdrant_port=CONFIG['qdrant_port'],
+            db_config=CONFIG['db_config']
+        )
+        logger.info("✓ Hybrid retrieval initialized")
+        
+        # Initialize reranker
+        logger.info("Initializing reranker...")
+        reranker = AdvancedReranker()
+        logger.info("✓ Reranker initialized")
+        
+        # Check Ollama availability
+        logger.info("Checking Ollama availability...")
+        service_stats['ollama_available'] = check_ollama_health()
+        if service_stats['ollama_available']:
+            logger.info("✓ Ollama is available")
+        else:
+            logger.warning("⚠ Ollama is not available")
+        
+        logger.info("="*60)
+        logger.info("RAG API Service started successfully")
+        logger.info(f"Listening on http://0.0.0.0:5005")
+        logger.info("="*60)
+        
+    except Exception as e:
+        logger.error(f"Error during startup: {e}")
+        raise
+    
+    yield  # Server is running
+    
+    # Shutdown
+    logger.info("Shutting down RAG API Service...")
+    logger.info("Goodbye!")
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="K&K Ticketportaal RAG API",
     description="AI-powered ticket assistance using RAG (Retrieval-Augmented Generation)",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Add CORS middleware
@@ -184,12 +238,15 @@ class StatsResponse(BaseModel):
     current_memory_percent: float
 
 
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup."""
+# Lifespan context manager (replaces deprecated on_event)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
     global hybrid_retrieval, reranker, service_stats
     
+    # Startup
     logger.info("="*60)
     logger.info("Starting RAG API Service")
     logger.info("="*60)
@@ -227,6 +284,12 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Error during startup: {e}")
         raise
+    
+    yield  # Server is running
+    
+    # Shutdown
+    logger.info("Shutting down RAG API Service...")
+    logger.info("Goodbye!")
 
 
 # Health check endpoint

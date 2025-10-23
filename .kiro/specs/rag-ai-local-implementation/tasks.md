@@ -325,13 +325,18 @@ z# Implementation Plan
 
 
 
-- [ ] 17.2 Implement RAG Prompt Generation
+- [x] 17.2 Implement RAG Prompt Generation
+
+
   - Create prompt template with query, context, sources
   - Include relationship chains
   - Add instructions for citing sources
   - Add instructions for flagging uncertainties
 
   - _Requirements: 3.3, 8.4_
+
+
+
 
 
 - [ ] 17.3 Implement Ollama Integration
@@ -349,6 +354,10 @@ z# Implementation Plan
   - Include relationship chains
   - Calculate confidence score
   - Flag uncertainties
+
+
+
+
   - Return structured response
   - _Requirements: 3.5, 8.4_
 

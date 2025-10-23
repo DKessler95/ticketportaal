@@ -109,10 +109,7 @@ $categories = $categoryObj->getCategories(true);
                         // Check if K&K articles already exist
                         $kk_count = 0;
                         try {
-                            global $pdo;
-                            if (!isset($pdo)) {
-                                require_once __DIR__ . '/../config/database.php';
-                            }
+                            require_once __DIR__ . '/../config/database.php';
                             $stmt = $pdo->query("SELECT COUNT(*) as count FROM knowledge_base WHERE title LIKE '%Kruit & Kramer%' OR title LIKE '%K&K%'");
                             $kk_count = $stmt->fetch()['count'];
                         } catch (Exception $e) {

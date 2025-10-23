@@ -407,10 +407,10 @@ function requireRole($allowedRoles, $redirectUrl = null) {
                     $redirectUrl = SITE_URL . '/admin/index.php';
                     break;
                 case 'agent':
-                    $redirectUrl = SITE_URL . '/agent/dashboard.php';
+                    $redirectUrl = SITE_URL . '/agent/index.php';
                     break;
                 default:
-                    $redirectUrl = SITE_URL . '/user/dashboard.php';
+                    $redirectUrl = SITE_URL . '/user/index.php';
             }
         }
         redirectTo($redirectUrl);
@@ -704,3 +704,5 @@ function isActive($page, $folder = null) {
     
     return ($pageMatches && $folderMatches) ? 'active' : '';
 }
+
+// Duplicate functions removed - already defined earlier in file

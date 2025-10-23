@@ -87,8 +87,13 @@ class VectorSearch:
         # Load embedding model
         self.embedding_model = SentenceTransformer(embedding_model_name)
         
-        # Initialize Qdrant client
-        self.qdrant_client = QdrantClient(host=qdrant_host, port=qdrant_port)
+        # Initialize Qdrant client (disable version check for compatibility)
+        self.qdrant_client = QdrantClient(
+            host=qdrant_host, 
+            port=qdrant_port,
+            prefer_grpc=False,
+            timeout=10
+        )
         
         logger.info("Vector search initialized successfully")
     
@@ -301,7 +306,13 @@ class BM25Search:
         """
         self.qdrant_host = qdrant_host
         self.qdrant_port = qdrant_port
-        self.qdrant_client = QdrantClient(host=qdrant_host, port=qdrant_port)
+        # Initialize Qdrant client (disable version check for compatibility)
+        self.qdrant_client = QdrantClient(
+            host=qdrant_host, 
+            port=qdrant_port,
+            prefer_grpc=False,
+            timeout=10
+        )
         
         # BM25 indexes for each collection
         self.bm25_indexes = {}
