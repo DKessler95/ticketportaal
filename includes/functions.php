@@ -555,10 +555,10 @@ function validateFileUpload($file) {
  */
 function initSession() {
     if (session_status() === PHP_SESSION_NONE) {
-        // Load session configuration
+        // Load session configuration BEFORE starting session
         require_once __DIR__ . '/../config/session.php';
         
-        // Start the session
+        // Start the session (session name is already set in session.php)
         session_start();
         
         // Regenerate session ID periodically to prevent fixation

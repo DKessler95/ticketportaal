@@ -246,6 +246,28 @@ $currentDir = basename(dirname($_SERVER['PHP_SELF']));
                 <hr class="my-3">
 
                 <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>🤖 AI Beheer</span>
+                </h6>
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo isActive('ai_dashboard.php', 'admin'); ?>" 
+                           href="<?php echo getBaseUrl(); ?>/admin/ai_dashboard.php">
+                            <i class="bi bi-robot me-2"></i>
+                            AI Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo isActive('ai_validation.php', 'admin'); ?>" 
+                           href="<?php echo getBaseUrl(); ?>/admin/ai_validation.php">
+                            <i class="bi bi-check2-square me-2"></i>
+                            AI Validatie
+                        </a>
+                    </li>
+                </ul>
+
+                <hr class="my-3">
+
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                     <span><?php _e('reporting'); ?></span>
                 </h6>
                 <ul class="nav flex-column mb-2">
@@ -279,3 +301,7 @@ $currentDir = basename(dirname($_SERVER['PHP_SELF']));
         </div>
     </div>
 </nav>
+
+
+<!-- AI Chat Widget (Global) -->
+<?php include __DIR__ . '/ai_chat_widget.php'; ?>

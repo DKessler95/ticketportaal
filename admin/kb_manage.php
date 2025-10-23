@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../classes/KnowledgeBase.php';
 require_once __DIR__ . '/../classes/Category.php';
 
@@ -22,6 +23,20 @@ $messageType = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
+            case 'import_kk_articles':
+                // Import K&K specific KB articles
+                try {
+                    require_once __DIR__ . '/../config/database.php';
+                    $sql = file_get_contents(__DIR__ . '/../database/migrations/008_add_kk_knowledge_base_articles.sql');
+                    $pdo->exec($sql);
+                    $message = '✓ K&K KB articles succesvol geïmporteerd! Vergeet niet om de AI sync te draaien.';
+                    $messageType = 'success';
+                } catch (Exception $e) {
+                    $message = '✗ Fout bij importeren: ' . $e->getMessage();
+                    $messageType = 'danger';
+                }
+                break;
+            
             case 'delete':
                 if (isset($_POST['kb_id'])) {
                     if ($kb->deleteArticle($_POST['kb_id'])) {
@@ -85,9 +100,35 @@ $categories = $categoryObj->getCategories(true);
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Knowledge Base Management</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
-                        <a href="kb_create.php" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Create New Article
-                        </a>
+                        <div class="btn-group me-2">
+                            <a href="kb_create.php" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Create New Article
+                            </a>
+                        </div>
+                        <?php
+                        // Check if K&K articles already exist
+                        $kk_count = 0;
+                        try {
+                            global $pdo;
+                            if (!isset($pdo)) {
+                                require_once __DIR__ . '/../config/database.php';
+                            }
+                            $stmt = $pdo->query("SELECT COUNT(*) as count FROM knowledge_base WHERE title LIKE '%Kruit & Kramer%' OR title LIKE '%K&K%'");
+                            $kk_count = $stmt->fetch()['count'];
+                        } catch (Exception $e) {
+                            $kk_count = 0;
+                        }
+                        
+                        if ($kk_count < 6):
+                        ?>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="action" value="import_kk_articles">
+                            <button type="submit" class="btn btn-success" 
+                                    onclick="return confirm('Dit importeert 6 K&K specifieke KB articles. Doorgaan?');">
+                                <i class="bi bi-download"></i> Import K&K Articles
+                            </button>
+                        </form>
+                        <?php endif; ?>
                     </div>
                 </div>
 

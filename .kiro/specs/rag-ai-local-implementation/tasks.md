@@ -142,7 +142,9 @@ z# Implementation Plan
   - Create Python NetworkX wrapper for graph operations
   - _Requirements: 3.1, 3.2_
 
-- [ ] 8. Implement Entity Extraction (NER)
+- [x] 8. Implement Entity Extraction (NER)
+
+
 
 
 
@@ -151,23 +153,41 @@ z# Implementation Plan
   - Extract: products, errors, locations, persons, organizations and other variables which are gonna be needed
   - _Requirements: 3.1_
 
-- [ ] 9. Implement Relationship Extraction
+
+
+
+
+
+
+- [x] 9. Implement Relationship Extraction
   - Create extract_relationships() function
   - Build edges: CREATED_BY, AFFECTS, SIMILAR_TO, RESOLVED_BY, BELONGS_TO
   - Calculate confidence scores for each relationship type
   - Handle edge cases (missing data, invalid references)
   - _Requirements: 3.2_
 
-- [ ]* 9.1 Human-in-the-Loop Validation
+- [x] 9.1 Human-in-the-Loop Validation
+
+
+
+
+
+
   - Create validation UI for reviewing extracted entities/relationships
   - Sample 100 tickets for manual review
   - Calculate precision/recall metrics
   - Adjust confidence thresholds based on results
+  - Intergrate UI in admin screen
   - _Requirements: 3.1_
 
 ## Phase 4: Advanced Sync Pipeline
 
-- [ ] 10. Implement Enhanced Data Sync Script
+- [x] 10. Implement Enhanced Data Sync Script
+
+
+
+
+
   - Create sync_tickets_to_vector_db.py with rich data extraction
   - Query tickets WITH dynamic fields (JSON aggregation)
   - Query tickets WITH comments (JSON aggregation)
@@ -175,35 +195,41 @@ z# Implementation Plan
   - Implement semantic chunking (header, description, comments, resolution)
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 10.1 Implement Embedding Generation
+- [x] 10.1 Implement Embedding Generation
+
+
   - Load sentence-transformers model (all-mpnet-base-v2)
   - Generate embeddings for each semantic chunk
   - Batch processing (100 chunks at a time)
   - Progress bar for long-running syncs
   - _Requirements: 2.3, 3.3_
 
-- [ ] 10.2 Implement ChromaDB Upsert
+- [x] 10.2 Implement ChromaDB Upsert
+
   - Create/get ChromaDB collections (tickets, kb, ci)
   - Upsert documents with embeddings and metadata
   - Handle duplicate detection (update if exists)
   - Error handling and retry logic
   - _Requirements: 2.3, 2.4_
 
-- [ ] 10.3 Implement Knowledge Graph Population
+- [x] 10.3 Implement Knowledge Graph Population
+
   - Extract entities from each ticket
   - Extract relationships between entities
   - Upsert nodes to graph_nodes table
   - Upsert edges to graph_edges table with confidence scores
   - _Requirements: 3.1, 3.2_
 
-- [ ] 10.4 Implement KB and CI Sync
+- [x] 10.4 Implement KB and CI Sync
+
   - Sync KB articles to kb_collection
   - Sync CI items to ci_collection
   - Extract entities from KB content
   - Build graph edges for KB → Ticket relationships
   - _Requirements: 2.1, 2.3_
 
-- [ ] 10.5 Add Logging and Error Handling
+- [x] 10.5 Add Logging and Error Handling
+
   - Structured logging with timestamps and log levels
   - Error handling for database connection failures
   - Error handling for embedding generation failures
@@ -218,35 +244,49 @@ z# Implementation Plan
 
 ## Phase 5: Hybrid Retrieval Implementation
 
-- [ ] 11. Implement Dense Vector Search
+- [x] 11. Implement Dense Vector Search
+
+
   - Create vector_search() function using ChromaDB
   - Query with embedding, return top-k results
   - Include metadata filtering (category, date range)
   - Return similarity scores
   - _Requirements: 3.2, 3.3_
 
-- [ ] 12. Implement Sparse Keyword Search (BM25)
+
+- [x] 12. Implement Sparse Keyword Search (BM25)
+
+
+
+
   - Install rank-bm25 library
   - Create BM25 index from ticket documents
   - Implement bm25_search() function
   - Return relevance scores
   - _Requirements: 3.2_
 
-- [ ] 13. Implement Graph Traversal Search
+
+- [x] 13. Implement Graph Traversal Search
+
   - Create graph_search() function using NetworkX
   - Find related entities within N hops (default 2)
   - Calculate graph centrality scores
   - Return subgraph relevant to query
+
   - _Requirements: 3.2, 3.4_
 
-- [ ] 14. Implement Hybrid Search Combiner
+- [x] 14. Implement Hybrid Search Combiner
+
   - Create hybrid_search() function
   - Execute vector, BM25, and graph searches in parallel
   - Combine results with weighted scoring
+
   - Remove duplicates
   - _Requirements: 3.2, 3.5_
 
-- [ ] 15. Implement Advanced Reranking
+- [x] 15. Implement Advanced Reranking
+
+
   - Create rerank_results() function
   - Multi-factor scoring: similarity (40%), BM25 (20%), centrality (15%), recency (15%), feedback (10%)
   - Sort by final score
@@ -255,14 +295,18 @@ z# Implementation Plan
 
 ## Phase 6: RAG API Implementation
 
-- [ ] 16. Create FastAPI RAG Service
+- [x] 16. Create FastAPI RAG Service
+
+
   - Create rag_api.py with FastAPI app
   - Define request/response models (Pydantic)
   - Implement /health endpoint
   - Implement /stats endpoint
   - _Requirements: 4.1, 4.2, 5.5_
 
-- [ ] 17. Implement /rag_query Endpoint
+
+- [x] 17. Implement /rag_query Endpoint
+
   - Accept query, top_k, include_tickets, include_kb, include_ci parameters
   - Generate query embedding
   - Execute hybrid search (vector + BM25 + graph)
@@ -270,25 +314,34 @@ z# Implementation Plan
   - Build context from top results
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 17.1 Implement Context Building with Provenance
+
+- [x] 17.1 Implement Context Building with Provenance
+
   - Extract relevant passages from top results
   - Include source metadata (ticket_number, title, category)
   - Build relationship chains from graph
   - Add confidence scores
   - _Requirements: 3.5, 8.4_
 
+
+
 - [ ] 17.2 Implement RAG Prompt Generation
   - Create prompt template with query, context, sources
   - Include relationship chains
   - Add instructions for citing sources
   - Add instructions for flagging uncertainties
+
   - _Requirements: 3.3, 8.4_
+
 
 - [ ] 17.3 Implement Ollama Integration
   - Query Ollama API with RAG prompt
   - Handle timeouts and connection errors
   - Parse response
+
   - Extract answer and metadata
+
+
   - _Requirements: 1.3, 3.3, 4.3_
 
 - [ ] 17.4 Implement Response Post-Processing
@@ -299,14 +352,17 @@ z# Implementation Plan
   - Return structured response
   - _Requirements: 3.5, 8.4_
 
-- [ ] 18. Implement Resource Throttling
+- [x] 18. Implement Resource Throttling
+
+
   - Check CPU/RAM before accepting query
   - Reject if system load >80%
   - Implement request semaphore (max 5 concurrent)
   - Add rate limiting (10 requests/minute per IP)
   - _Requirements: 6.4, 6.5_
 
-- [ ] 19. Implement Query Result Caching
+- [x] 19. Implement Query Result Caching
+
   - LRU cache for frequent queries (maxsize=100)
   - Hash query text for cache key
   - Cache embeddings separately
@@ -322,13 +378,16 @@ z# Implementation Plan
 
 ## Phase 7: FastAPI Service Deployment
 
-- [ ] 20. Create FastAPI Startup Script
+- [x] 20. Create FastAPI Startup Script
+
+
   - Create start_rag_api.bat
   - Activate venv
   - Run uvicorn with correct host/port
   - _Requirements: 5.1_
 
-- [ ] 21. Install FastAPI as Windows Service
+- [x] 21. Install FastAPI as Windows Service
+
   - Use NSSM to install TicketportaalRAG service
   - Configure working directory
   - Configure stdout/stderr logging
@@ -336,7 +395,8 @@ z# Implementation Plan
   - Configure recovery options
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 22. Test Service Operations
+- [x] 22. Test Service Operations
+
   - Start service and verify /health endpoint
   - Stop service and verify it stops cleanly
   - Restart service and verify it recovers
@@ -345,7 +405,9 @@ z# Implementation Plan
 
 ## Phase 8: Windows Task Scheduler Setup
 
-- [ ] 23. Create Daily Sync Scheduled Task
+- [x] 23. Create Daily Sync Scheduled Task
+
+
   - Create task: TicketportaalAISync
   - Trigger: Daily at 02:00
   - Action: Run sync_tickets_to_vector_db.py
@@ -353,14 +415,17 @@ z# Implementation Plan
   - Configure to run whether user logged in or not
   - _Requirements: 2.2, 5.1_
 
-- [ ] 24. Create Health Monitor Script
+- [x] 24. Create Health Monitor Script
+
   - Create health_monitor.ps1
   - Check Ollama and TicketportaalRAG service status
   - Check disk space
   - Send email alerts on failures
   - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 25. Create Health Monitor Scheduled Task
+- [x] 25. Create Health Monitor Scheduled Task
+
+
   - Create task: TicketportaalAIHealthMonitor
   - Trigger: Every 30 minutes
   - Action: Run health_monitor.ps1
@@ -375,7 +440,9 @@ z# Implementation Plan
 
 ## Phase 9: PHP Integration Layer
 
-- [ ] 26. Create AIHelper PHP Class
+- [x] 26. Create AIHelper PHP Class
+
+
   - Create includes/ai_helper.php
   - Implement isEnabled() with health check
   - Implement getSuggestions() with cURL to RAG API
@@ -383,7 +450,10 @@ z# Implementation Plan
   - Add error handling and graceful degradation
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 8.3_
 
-- [ ] 27. Create AI Suggestion Widget
+- [x] 27. Create AI Suggestion Widget
+
+
+
   - Create includes/ai_suggestion_widget.php
   - Display AI answer with formatting
   - Display similar tickets with links
@@ -392,19 +462,24 @@ z# Implementation Plan
   - Display confidence scores and uncertainties
   - _Requirements: 3.5, 4.4, 8.4_
 
-- [ ] 28. Integrate AI into Ticket Detail Pages
+- [x] 28. Integrate AI into Ticket Detail Pages
+
+
   - Update agent/ticket_detail.php to include AIHelper
   - Call getSuggestions() with ticket text
   - Include ai_suggestion_widget.php if successful
   - Handle errors gracefully (don't break page)
   - _Requirements: 3.1, 4.4_
 
-- [ ] 28.1 Integrate AI into User Ticket Detail
+- [x] 28.1 Integrate AI into User Ticket Detail
+
   - Update user/ticket_detail.php similarly
   - Show simplified AI suggestions for end users
   - _Requirements: 3.1, 4.4_
 
-- [ ] 29. Create AI Dashboard for Admins
+- [x] 29. Create AI Dashboard for Admins
+
+
   - Create admin/ai_dashboard.php
   - Display service status (Ollama, RAG API)
   - Display statistics (tickets embedded, KB count, CI count, queries today)
@@ -415,7 +490,9 @@ z# Implementation Plan
   - Add "Restart Services" button
   - _Requirements: 7.1, 7.4_
 
-- [ ] 30. Implement Feature Flag System
+- [x] 30. Implement Feature Flag System
+
+
   - Add AI_ENABLED constant to config/config.php
   - Add AI_BETA_USERS array for staged rollout
   - Update AIHelper::isEnabled() to check feature flags

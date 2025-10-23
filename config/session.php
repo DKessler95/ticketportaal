@@ -20,6 +20,7 @@ ini_set('session.use_only_cookies', '1');       // Only use cookies for session 
 ini_set('session.cookie_secure', '0');          // Only send cookie over HTTPS (set to 0 for development without SSL)
 ini_set('session.use_strict_mode', '1');        // Reject uninitialized session IDs
 ini_set('session.cookie_samesite', 'Lax');      // Prevent CSRF attacks (Lax for development, Strict for production)
+ini_set('session.cookie_path', '/');            // Make session cookie available for entire site
 
 // Session lifetime and garbage collection
 ini_set('session.gc_maxlifetime', SESSION_TIMEOUT);  // Session lifetime in seconds
@@ -32,7 +33,9 @@ ini_set('session.hash_function', 'sha256');     // Hash function for session ID
 ini_set('session.hash_bits_per_character', 5);  // Bits per character in session ID
 
 // Session name (avoid default PHPSESSID which reveals PHP usage)
-ini_set('session.name', 'ICT_PORTAL_SESSION');
+// TEMPORARY: Using PHPSESSID for compatibility with existing sessions
+// TODO: Change to 'ICT_PORTAL_SESSION' after all users re-login
+session_name('PHPSESSID');
 
 // Prevent session fixation by regenerating ID on privilege escalation
 // This is handled in the login process

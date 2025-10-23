@@ -262,5 +262,8 @@ $pageTitle = 'Admin Dashboard';
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- AI Chat Widget -->
+<?php include __DIR__ . '/../includes/ai_chat_widget.php'; ?>
 </body>
 </html>

@@ -66,6 +66,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                     <i class="bi bi-list-task me-1"></i>Mijn Tickets
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo $currentPage === 'ai_assistant.php' ? 'active' : ''; ?>" 
+                                   href="<?php echo getBaseUrl(); ?>/user/ai_assistant.php">
+                                    <i class="bi bi-robot me-1"></i>AI Assistent
+                                </a>
+                            </li>
                         <?php elseif ($userRole === 'agent'): ?>
                             <li class="nav-item">
                                 <a class="nav-link <?php echo $currentPage === 'dashboard.php' ? 'active' : ''; ?>" 
@@ -77,6 +83,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                 <a class="nav-link <?php echo $currentPage === 'my_tickets.php' ? 'active' : ''; ?>" 
                                    href="<?php echo getBaseUrl(); ?>/agent/my_tickets.php">
                                     <i class="bi bi-person-check me-1"></i>Mijn Toegewezen
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo $currentPage === 'ai_assistant.php' ? 'active' : ''; ?>" 
+                                   href="<?php echo getBaseUrl(); ?>/agent/ai_assistant.php">
+                                    <i class="bi bi-robot me-1"></i>AI Assistent
                                 </a>
                             </li>
                         <?php elseif ($userRole === 'admin'): ?>
@@ -96,6 +108,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                                 <a class="nav-link <?php echo $currentPage === 'categories.php' ? 'active' : ''; ?>" 
                                    href="<?php echo getBaseUrl(); ?>/admin/categories.php">
                                     <i class="bi bi-tags me-1"></i>Categorieën
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?php echo $currentPage === 'ai_assistant.php' ? 'active' : ''; ?>" 
+                                   href="<?php echo getBaseUrl(); ?>/admin/ai_assistant.php">
+                                    <i class="bi bi-robot me-1"></i>AI Assistent
                                 </a>
                             </li>
                         <?php endif; ?>

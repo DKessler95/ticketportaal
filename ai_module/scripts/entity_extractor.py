@@ -1,400 +1,445 @@
 """
-Entity Extraction Module for Ticketportaal RAG System
+Entity Extraction Module
+Extracts named entities from ticket text using spaCy NER.
 
-This module provides Named Entity Recognition (NER) functionality to extract
-structured entities from ticket text, including products, errors, locations,
-persons, organizations, and technical terms.
-
-Requirements: 3.1
+This module handles:
+- Loading Dutch NER model (nl_core_news_lg)
+- Extracting entities: products, errors, locations, persons, organizations
+- Extracting domain-specific entities from dynamic fields
+- Confidence scoring for extracted entities
 """
 
+import spacy
+from typing import Dict, List, Tuple, Optional, Any
 import re
 import logging
-from typing import Dict, List, Set, Optional
-from dataclasses import dataclass, field
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
+    format='[%(asctime)s] [%(levelname)s] [NER] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ExtractedEntities:
-    """Container for extracted entities from ticket text"""
-    products: List[str] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
-    locations: List[str] = field(default_factory=list)
-    persons: List[str] = field(default_factory=list)
-    organizations: List[str] = field(default_factory=list)
-    technical_terms: List[str] = field(default_factory=list)
-    brands: List[str] = field(default_factory=list)
-    models: List[str] = field(default_factory=list)
-    ip_addresses: List[str] = field(default_factory=list)
-    email_addresses: List[str] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, List[str]]:
-        """Convert to dictionary format"""
-        return {
-            'products': self.products,
-            'errors': self.errors,
-            'locations': self.locations,
-            'persons': self.persons,
-            'organizations': self.organizations,
-            'technical_terms': self.technical_terms,
-            'brands': self.brands,
-            'models': self.models,
-            'ip_addresses': self.ip_addresses,
-            'email_addresses': self.email_addresses
-        }
-
-
 class EntityExtractor:
     """
-    Entity extraction using spaCy NER and pattern matching
+    Named Entity Recognition for ticket text.
     
-    This class provides methods to extract various entity types from ticket text,
-    combining spaCy's NER capabilities with custom pattern matching for
-    technical terms, error codes, and domain-specific entities.
+    Extracts entities from ticket descriptions, comments, and dynamic fields
+    to populate the knowledge graph.
     """
     
-    def __init__(self, use_spacy: bool = True):
+    def __init__(self, model_name: str = "nl_core_news_lg"):
         """
-        Initialize the entity extractor
+        Initialize entity extractor with spaCy model.
         
         Args:
-            use_spacy: Whether to use spaCy NER (requires model download)
+            model_name: spaCy model to use (default: nl_core_news_lg for Dutch)
         """
-        self.use_spacy = use_spacy
+        self.model_name = model_name
         self.nlp = None
+        self._load_model()
         
-        if use_spacy:
-            try:
-                import spacy
-                # Try to load Dutch model
-                try:
-                    self.nlp = spacy.load("nl_core_news_lg")
-                    logger.info("Loaded spaCy Dutch model: nl_core_news_lg")
-                except OSError:
-                    logger.warning("Dutch model not found, trying smaller model")
-                    try:
-                        self.nlp = spacy.load("nl_core_news_sm")
-                        logger.info("Loaded spaCy Dutch model: nl_core_news_sm")
-                    except OSError:
-                        logger.warning("No Dutch spaCy model found. Run: python -m spacy download nl_core_news_lg")
-                        self.use_spacy = False
-            except ImportError:
-                logger.warning("spaCy not installed. Install with: pip install spacy")
-                self.use_spacy = False
-        
-        # Known brands (hardware/software)
-        self.known_brands = {
-            'dell', 'hp', 'lenovo', 'asus', 'acer', 'microsoft', 'apple',
-            'cisco', 'netgear', 'tp-link', 'canon', 'epson', 'brother',
-            'samsung', 'lg', 'intel', 'amd', 'nvidia', 'adobe', 'oracle'
-        }
-        
-        # Known locations (can be extended from database)
-        self.known_locations = {
-            'hengelo', 'enschede', 'kantoor hengelo', 'kantoor enschede',
-            'warehouse', 'magazijn', 'serverruimte', 'server room'
-        }
-        
-        # Technical terms patterns
-        self.technical_patterns = [
-            r'\b(?:windows|linux|macos|ubuntu|debian)\b',
-            r'\b(?:office|excel|word|outlook|powerpoint)\b',
-            r'\b(?:chrome|firefox|edge|safari)\b',
-            r'\b(?:vpn|wifi|lan|wan|dhcp|dns|tcp|ip|http|https|ftp|smtp|pop3|imap)\b',
-            r'\b(?:bios|uefi|boot|startup|shutdown|reboot)\b',
-            r'\b(?:driver|firmware|software|hardware|update|patch)\b',
-            r'\b(?:printer|scanner|monitor|keyboard|mouse|laptop|desktop|server)\b',
-            r'\b(?:ram|cpu|gpu|ssd|hdd|disk|memory)\b',
+        # Domain-specific patterns for IT entities
+        self.error_patterns = [
+            r'error\s*[:\s]*\d+',
+            r'0x[0-9A-Fa-f]+',
+            r'blue\s*screen',
+            r'BSOD',
+            r'fatal\s*error',
+            r'exception',
+            r'crash',
         ]
         
-        logger.info(f"EntityExtractor initialized (spaCy: {self.use_spacy})")
+        self.product_brands = [
+            'Dell', 'HP', 'Lenovo', 'Microsoft', 'Windows', 'Office',
+            'Adobe', 'Chrome', 'Firefox', 'Outlook', 'Teams', 'Zoom',
+            'Canon', 'Epson', 'Brother', 'Samsung', 'Apple', 'Cisco'
+        ]
+        
+        self.location_keywords = [
+            'kantoor', 'locatie', 'afdeling', 'verdieping', 'kamer',
+            'Hengelo', 'Enschede', 'warehouse', 'magazijn'
+        ]
     
-    def extract_entities(self, text: str) -> ExtractedEntities:
+    def _load_model(self) -> None:
+        """Load spaCy NER model."""
+        try:
+            logger.info(f"Loading spaCy model: {self.model_name}")
+            self.nlp = spacy.load(self.model_name)
+            logger.info(f"Model loaded successfully")
+        except OSError:
+            logger.error(f"Model {self.model_name} not found. Install with: python -m spacy download {self.model_name}")
+            raise
+    
+    def extract_entities(self, text: str, dynamic_fields: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Extract all entity types from text
+        Extract all entities from text and dynamic fields.
         
         Args:
-            text: Input text (ticket description, title, comments, etc.)
-            
+            text: Ticket description, comment, or resolution text
+            dynamic_fields: Optional dictionary of dynamic field values
+        
         Returns:
-            ExtractedEntities object containing all extracted entities
+            Dictionary with entity types as keys and lists of entities as values
+            {
+                'products': [{'text': 'Dell Latitude', 'confidence': 0.9}],
+                'errors': [{'text': 'Error 0x0000007B', 'confidence': 1.0}],
+                'persons': [{'text': 'Jan Jansen', 'confidence': 0.95}],
+                'organizations': [{'text': 'Microsoft', 'confidence': 0.85}],
+                'locations': [{'text': 'Kantoor Hengelo', 'confidence': 0.9}]
+            }
         """
-        if not text or not text.strip():
-            return ExtractedEntities()
+        entities = {
+            'products': [],
+            'errors': [],
+            'persons': [],
+            'organizations': [],
+            'locations': [],
+            'misc': []
+        }
         
-        entities = ExtractedEntities()
-        text_lower = text.lower()
+        if not text:
+            return entities
         
-        # Extract using spaCy NER if available
-        if self.use_spacy and self.nlp:
-            entities = self._extract_with_spacy(text, entities)
+        # Extract entities using spaCy NER
+        doc = self.nlp(text)
         
-        # Extract using pattern matching (always run)
-        entities.errors = self._extract_errors(text)
-        entities.ip_addresses = self._extract_ip_addresses(text)
-        entities.email_addresses = self._extract_email_addresses(text)
-        entities.brands = self._extract_brands(text_lower)
-        entities.models = self._extract_models(text)
-        entities.technical_terms = self._extract_technical_terms(text_lower)
-        entities.products = self._extract_products(text)
-        
-        # Extract locations (combine spaCy + known locations)
-        pattern_locations = self._extract_locations(text_lower)
-        entities.locations = list(set(entities.locations + pattern_locations))
-        
-        # Deduplicate all lists
-        entities = self._deduplicate_entities(entities)
-        
-        logger.debug(f"Extracted entities: {len(entities.products)} products, "
-                    f"{len(entities.errors)} errors, {len(entities.locations)} locations")
-        
-        return entities
-    
-    def _extract_with_spacy(self, text: str, entities: ExtractedEntities) -> ExtractedEntities:
-        """Extract entities using spaCy NER"""
-        try:
-            doc = self.nlp(text)
+        for ent in doc.ents:
+            entity_data = {
+                'text': ent.text,
+                'label': ent.label_,
+                'confidence': 0.8,  # Base confidence for spaCy entities
+                'start': ent.start_char,
+                'end': ent.end_char
+            }
             
-            for ent in doc.ents:
-                entity_text = ent.text.strip()
-                
-                if ent.label_ == 'PER' or ent.label_ == 'PERSON':
-                    # Person names
-                    entities.persons.append(entity_text)
-                
-                elif ent.label_ == 'ORG':
-                    # Organizations
-                    entities.organizations.append(entity_text)
-                
-                elif ent.label_ == 'LOC' or ent.label_ == 'GPE':
-                    # Locations
-                    entities.locations.append(entity_text)
-                
-                elif ent.label_ == 'PRODUCT':
-                    # Products
-                    entities.products.append(entity_text)
+            # Map spaCy labels to our entity types
+            if ent.label_ == 'PER' or ent.label_ == 'PERSON':
+                entities['persons'].append(entity_data)
+            elif ent.label_ == 'ORG':
+                # Check if it's a known product brand
+                if any(brand.lower() in ent.text.lower() for brand in self.product_brands):
+                    entity_data['confidence'] = 0.9
+                    entities['products'].append(entity_data)
+                else:
+                    entities['organizations'].append(entity_data)
+            elif ent.label_ == 'LOC' or ent.label_ == 'GPE':
+                entities['locations'].append(entity_data)
+            elif ent.label_ == 'PRODUCT':
+                entity_data['confidence'] = 0.85
+                entities['products'].append(entity_data)
+            else:
+                entities['misc'].append(entity_data)
         
-        except Exception as e:
-            logger.error(f"spaCy extraction error: {e}")
+        # Extract error codes and messages using regex
+        error_entities = self._extract_errors(text)
+        entities['errors'].extend(error_entities)
+        
+        # Extract product mentions using brand patterns
+        product_entities = self._extract_products(text)
+        entities['products'].extend(product_entities)
+        
+        # Extract location mentions
+        location_entities = self._extract_locations(text)
+        entities['locations'].extend(location_entities)
+        
+        # Extract entities from dynamic fields
+        if dynamic_fields:
+            field_entities = self._extract_from_dynamic_fields(dynamic_fields)
+            for entity_type, entity_list in field_entities.items():
+                entities[entity_type].extend(entity_list)
+        
+        # Remove duplicates and sort by confidence
+        for entity_type in entities:
+            entities[entity_type] = self._deduplicate_entities(entities[entity_type])
         
         return entities
     
-    def _extract_errors(self, text: str) -> List[str]:
-        """Extract error codes and error messages"""
+    def _extract_errors(self, text: str) -> List[Dict[str, Any]]:
+        """Extract error codes and error messages."""
         errors = []
         
-        # Windows error codes (0x...)
-        hex_errors = re.findall(r'\b0x[0-9A-Fa-f]{8}\b', text)
-        errors.extend(hex_errors)
-        
-        # HTTP status codes
-        http_errors = re.findall(r'\b(?:error|status)\s*:?\s*([45]\d{2})\b', text, re.IGNORECASE)
-        errors.extend([f"HTTP {code}" for code in http_errors])
-        
-        # Generic error patterns
-        error_patterns = [
-            r'error\s*:?\s*([A-Z0-9_-]+)',
-            r'exception\s*:?\s*([A-Za-z]+Exception)',
-            r'failed\s+with\s+code\s+(\d+)',
-            r'error\s+code\s*:?\s*([A-Z0-9-]+)',
-        ]
-        
-        for pattern in error_patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            errors.extend(matches)
+        for pattern in self.error_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                errors.append({
+                    'text': match.group(0),
+                    'label': 'ERROR',
+                    'confidence': 1.0,  # High confidence for pattern matches
+                    'start': match.start(),
+                    'end': match.end()
+                })
         
         return errors
     
-    def _extract_ip_addresses(self, text: str) -> List[str]:
-        """Extract IP addresses (IPv4)"""
-        ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-        ips = re.findall(ip_pattern, text)
-        
-        # Validate IP addresses
-        valid_ips = []
-        for ip in ips:
-            parts = ip.split('.')
-            if all(0 <= int(part) <= 255 for part in parts):
-                valid_ips.append(ip)
-        
-        return valid_ips
-    
-    def _extract_email_addresses(self, text: str) -> List[str]:
-        """Extract email addresses"""
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        emails = re.findall(email_pattern, text)
-        return emails
-    
-    def _extract_brands(self, text_lower: str) -> List[str]:
-        """Extract known hardware/software brands"""
-        brands = []
-        
-        for brand in self.known_brands:
-            if brand in text_lower:
-                brands.append(brand.capitalize())
-        
-        return brands
-    
-    def _extract_models(self, text: str) -> List[str]:
-        """Extract product model numbers"""
-        models = []
-        
-        # Common model patterns
-        model_patterns = [
-            r'\b[A-Z]{2,}\s*-?\s*\d{3,5}[A-Z]?\b',  # HP-2055, DELL-5520
-            r'\b(?:Latitude|Optiplex|ThinkPad|Pavilion|ProBook)\s+\d{4}\b',  # Latitude 5520
-            r'\b[A-Z]\d{3,4}[A-Z]?\b',  # E5570, T480
-        ]
-        
-        for pattern in model_patterns:
-            matches = re.findall(pattern, text)
-            models.extend(matches)
-        
-        return models
-    
-    def _extract_technical_terms(self, text_lower: str) -> List[str]:
-        """Extract technical terms and keywords"""
-        terms = []
-        
-        for pattern in self.technical_patterns:
-            matches = re.findall(pattern, text_lower, re.IGNORECASE)
-            terms.extend(matches)
-        
-        return terms
-    
-    def _extract_products(self, text: str) -> List[str]:
-        """Extract product names (combination of brand + model)"""
+    def _extract_products(self, text: str) -> List[Dict[str, Any]]:
+        """Extract product names and brands."""
         products = []
         
-        # Look for brand + model combinations
-        for brand in self.known_brands:
-            # Pattern: Brand Model
-            pattern = rf'\b{brand}\s+[A-Za-z0-9-]+\b'
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            products.extend(matches)
+        for brand in self.product_brands:
+            # Look for brand mentions with potential model numbers
+            pattern = rf'\b{brand}\b[\s\w\-]*'
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            
+            for match in matches:
+                product_text = match.group(0).strip()
+                # Only include if it's more than just the brand name
+                if len(product_text) > len(brand) + 2:
+                    products.append({
+                        'text': product_text,
+                        'label': 'PRODUCT',
+                        'confidence': 0.9,
+                        'start': match.start(),
+                        'end': match.end()
+                    })
         
         return products
     
-    def _extract_locations(self, text_lower: str) -> List[str]:
-        """Extract known locations"""
+    def _extract_locations(self, text: str) -> List[Dict[str, Any]]:
+        """Extract location mentions."""
         locations = []
         
-        for location in self.known_locations:
-            if location in text_lower:
-                locations.append(location.title())
+        for keyword in self.location_keywords:
+            # Look for location keywords with context
+            pattern = rf'\b{keyword}\b[\s\w\-]*'
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            
+            for match in matches:
+                location_text = match.group(0).strip()
+                locations.append({
+                    'text': location_text,
+                    'label': 'LOCATION',
+                    'confidence': 0.75,
+                    'start': match.start(),
+                    'end': match.end()
+                })
         
         return locations
     
-    def _deduplicate_entities(self, entities: ExtractedEntities) -> ExtractedEntities:
-        """Remove duplicates from all entity lists"""
-        entities.products = list(set(entities.products))
-        entities.errors = list(set(entities.errors))
-        entities.locations = list(set(entities.locations))
-        entities.persons = list(set(entities.persons))
-        entities.organizations = list(set(entities.organizations))
-        entities.technical_terms = list(set(entities.technical_terms))
-        entities.brands = list(set(entities.brands))
-        entities.models = list(set(entities.models))
-        entities.ip_addresses = list(set(entities.ip_addresses))
-        entities.email_addresses = list(set(entities.email_addresses))
+    def _extract_from_dynamic_fields(self, dynamic_fields: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+        """Extract entities from structured dynamic fields."""
+        entities = {
+            'products': [],
+            'errors': [],
+            'persons': [],
+            'organizations': [],
+            'locations': [],
+            'misc': []
+        }
+        
+        # Map field names to entity types
+        field_mapping = {
+            'merk': 'products',
+            'model': 'products',
+            'brand': 'products',
+            'applicatie_naam': 'products',
+            'locatie': 'locations',
+            'afdeling': 'organizations',
+            'department': 'organizations',
+            'naam': 'persons',
+            'name': 'persons',
+        }
+        
+        for field_name, field_value in dynamic_fields.items():
+            if not field_value or not isinstance(field_value, str):
+                continue
+            
+            # Normalize field name
+            field_name_lower = field_name.lower().replace(' ', '_')
+            
+            # Find matching entity type
+            entity_type = None
+            for key, value in field_mapping.items():
+                if key in field_name_lower:
+                    entity_type = value
+                    break
+            
+            if entity_type:
+                entities[entity_type].append({
+                    'text': field_value,
+                    'label': entity_type.upper(),
+                    'confidence': 1.0,  # High confidence for structured data
+                    'source': 'dynamic_field',
+                    'field_name': field_name
+                })
         
         return entities
     
-    def extract_from_ticket(self, ticket_data: Dict) -> ExtractedEntities:
+    def _deduplicate_entities(self, entities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate entities and keep highest confidence."""
+        if not entities:
+            return []
+        
+        # Group by normalized text
+        entity_map = {}
+        for entity in entities:
+            key = entity['text'].lower().strip()
+            if key not in entity_map or entity['confidence'] > entity_map[key]['confidence']:
+                entity_map[key] = entity
+        
+        # Sort by confidence (descending)
+        result = list(entity_map.values())
+        result.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        return result
+    
+    def extract_ticket_entities(self, ticket_data: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Extract entities from complete ticket data
+        Extract entities from complete ticket data.
         
         Args:
-            ticket_data: Dictionary containing ticket fields (title, description, comments, etc.)
-            
+            ticket_data: Dictionary containing ticket fields
+                {
+                    'title': str,
+                    'description': str,
+                    'comments': List[str],
+                    'resolution': str,
+                    'dynamic_fields': Dict[str, Any]
+                }
+        
         Returns:
-            ExtractedEntities object with all extracted entities
+            Combined entities from all ticket text fields
         """
-        # Combine all text fields
-        text_parts = []
+        all_entities = {
+            'products': [],
+            'errors': [],
+            'persons': [],
+            'organizations': [],
+            'locations': [],
+            'misc': []
+        }
         
-        if 'title' in ticket_data and ticket_data['title']:
-            text_parts.append(ticket_data['title'])
+        # Extract from title
+        if ticket_data.get('title'):
+            title_entities = self.extract_entities(ticket_data['title'])
+            for entity_type, entity_list in title_entities.items():
+                all_entities[entity_type].extend(entity_list)
         
-        if 'description' in ticket_data and ticket_data['description']:
-            text_parts.append(ticket_data['description'])
+        # Extract from description
+        if ticket_data.get('description'):
+            desc_entities = self.extract_entities(ticket_data['description'])
+            for entity_type, entity_list in desc_entities.items():
+                all_entities[entity_type].extend(entity_list)
         
-        if 'resolution' in ticket_data and ticket_data['resolution']:
-            text_parts.append(ticket_data['resolution'])
-        
-        # Add comments
-        if 'comments' in ticket_data and ticket_data['comments']:
+        # Extract from comments
+        if ticket_data.get('comments'):
             for comment in ticket_data['comments']:
-                if isinstance(comment, dict) and 'comment_text' in comment:
-                    text_parts.append(comment['comment_text'])
-                elif isinstance(comment, str):
-                    text_parts.append(comment)
+                if isinstance(comment, str):
+                    comment_text = comment
+                elif isinstance(comment, dict):
+                    comment_text = comment.get('text', '')
+                else:
+                    continue
+                
+                comment_entities = self.extract_entities(comment_text)
+                for entity_type, entity_list in comment_entities.items():
+                    all_entities[entity_type].extend(entity_list)
         
-        # Combine all text
-        combined_text = ' '.join(text_parts)
+        # Extract from resolution
+        if ticket_data.get('resolution'):
+            resolution_entities = self.extract_entities(ticket_data['resolution'])
+            for entity_type, entity_list in resolution_entities.items():
+                all_entities[entity_type].extend(entity_list)
         
-        # Extract entities
-        entities = self.extract_entities(combined_text)
+        # Extract from dynamic fields
+        if ticket_data.get('dynamic_fields'):
+            field_entities = self._extract_from_dynamic_fields(ticket_data['dynamic_fields'])
+            for entity_type, entity_list in field_entities.items():
+                all_entities[entity_type].extend(entity_list)
         
-        # Add dynamic field values as additional context
-        if 'dynamic_fields' in ticket_data and ticket_data['dynamic_fields']:
-            for field in ticket_data['dynamic_fields']:
-                if isinstance(field, dict):
-                    field_name = field.get('field_name', '').lower()
-                    field_value = field.get('field_value', '')
-                    
-                    if field_value:
-                        # Categorize based on field name
-                        if 'merk' in field_name or 'brand' in field_name:
-                            entities.brands.append(field_value)
-                        elif 'model' in field_name:
-                            entities.models.append(field_value)
-                        elif 'locatie' in field_name or 'location' in field_name:
-                            entities.locations.append(field_value)
+        # Deduplicate all entities
+        for entity_type in all_entities:
+            all_entities[entity_type] = self._deduplicate_entities(all_entities[entity_type])
         
-        # Deduplicate again after adding dynamic fields
-        entities = self._deduplicate_entities(entities)
+        return all_entities
+    
+    def entities_to_graph_nodes(self, entities: Dict[str, List[Dict[str, Any]]], 
+                                ticket_id: int) -> List[Dict[str, Any]]:
+        """
+        Convert extracted entities to graph node format.
         
-        return entities
+        Args:
+            entities: Dictionary of extracted entities
+            ticket_id: ID of the ticket these entities came from
+        
+        Returns:
+            List of node dictionaries ready for graph insertion
+        """
+        nodes = []
+        
+        entity_type_mapping = {
+            'products': 'product',
+            'errors': 'error',
+            'persons': 'person',
+            'organizations': 'organization',
+            'locations': 'location',
+            'misc': 'entity'
+        }
+        
+        for entity_type, entity_list in entities.items():
+            node_type = entity_type_mapping.get(entity_type, 'entity')
+            
+            for entity in entity_list:
+                # Create unique node ID
+                node_id = f"{node_type}_{entity['text'].lower().replace(' ', '_')}"
+                
+                nodes.append({
+                    'node_id': node_id,
+                    'node_type': node_type,
+                    'properties': {
+                        'name': entity['text'],
+                        'label': entity.get('label', entity_type.upper()),
+                        'confidence': entity['confidence'],
+                        'source_ticket_id': ticket_id,
+                        'extracted_at': datetime.now().isoformat()
+                    }
+                })
+        
+        return nodes
 
 
-def main():
-    """Test the entity extractor"""
-    # Test text
-    test_text = """
-    Laptop Dell Latitude 5520 start niet op na Windows update.
-    Error code: 0x0000007B
-    Locatie: Kantoor Hengelo
-    IP adres: 192.168.1.100
-    Contact: jan.jansen@kruit-en-kramer.nl
+# Example usage
+if __name__ == "__main__":
+    # Initialize extractor
+    extractor = EntityExtractor()
     
-    Printer HP LaserJet 2055 geeft paper jam error.
-    Status: HTTP 500 error bij printen.
-    """
+    # Example ticket data
+    ticket_data = {
+        'title': 'Dell Latitude laptop start niet op',
+        'description': 'Mijn Dell Latitude 5520 geeft een blue screen error 0x0000007B bij opstarten. Het probleem is begonnen na de laatste Windows update.',
+        'comments': [
+            'Ik heb geprobeerd in safe mode op te starten maar dat werkt ook niet.',
+            'De laptop staat op kantoor Hengelo, verdieping 2.'
+        ],
+        'resolution': 'BIOS update uitgevoerd en boot order aangepast. Probleem opgelost.',
+        'dynamic_fields': {
+            'Merk': 'Dell',
+            'Model': 'Latitude 5520',
+            'Serienummer': 'ABC123XYZ',
+            'Locatie': 'Kantoor Hengelo',
+            'Afdeling': 'Sales'
+        }
+    }
     
-    print("Testing Entity Extractor...")
-    print("=" * 60)
-    
-    extractor = EntityExtractor(use_spacy=True)
-    entities = extractor.extract_entities(test_text)
+    # Extract entities
+    print("Extracting entities from ticket...")
+    entities = extractor.extract_ticket_entities(ticket_data)
     
     print("\nExtracted Entities:")
-    print("-" * 60)
-    for entity_type, values in entities.to_dict().items():
-        if values:
-            print(f"{entity_type.upper()}: {values}")
+    for entity_type, entity_list in entities.items():
+        if entity_list:
+            print(f"\n{entity_type.upper()}:")
+            for entity in entity_list:
+                print(f"  - {entity['text']} (confidence: {entity['confidence']:.2f})")
     
-    print("\n" + "=" * 60)
-    print("Test completed!")
-
-
-if __name__ == "__main__":
-    main()
+    # Convert to graph nodes
+    print("\nConverting to graph nodes...")
+    nodes = extractor.entities_to_graph_nodes(entities, ticket_id=123)
+    
+    print(f"\nGenerated {len(nodes)} graph nodes:")
+    for node in nodes[:5]:  # Show first 5
+        print(f"  - {node['node_id']}: {node['properties']['name']}")

@@ -26,5 +26,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JavaScript -->
     <script src="<?php echo getBaseUrl(); ?>/assets/js/main.js"></script>
+    
+    <!-- AI Chat Widget -->
+    <?php include __DIR__ . '/ai_chat_widget.php'; ?>
 </body>
 </html>
