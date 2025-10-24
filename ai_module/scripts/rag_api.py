@@ -138,7 +138,7 @@ CONFIG = {
     # Ollama Configuration
     'ollama_url': 'http://localhost:11434',
     'ollama_model': 'llama3.1:8b',
-    'ollama_timeout': 30,
+    'ollama_timeout': 120,  # Increased to 120 seconds for complex queries
     'max_context_length': 4000,
     'default_top_k': 10
 }

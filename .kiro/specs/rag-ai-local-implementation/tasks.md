@@ -734,3 +734,81 @@ z# Implementation Plan
   - Cross-system ticket linking
   - Shared knowledge base
   - _Requirements: 11.2_
+
+
+## Phase 16: Advanced Learning & User Experience
+
+- [ ] 56. Implement Chat History Storage
+  - Create chat_conversations table (conversation_id, user_id, started_at, ended_at)
+  - Create chat_messages table (message_id, conversation_id, role, message, timestamp, feedback_score)
+  - Store all chat interactions with metadata
+  - Link conversations to resolved tickets
+  - _Requirements: Learning from interactions_
+
+- [ ] 57. Implement Feedback Collection System
+  - Add thumbs up/down buttons to AI responses
+  - Store feedback in chat_messages table
+  - Track which answers were helpful/not helpful
+  - Create feedback_analytics table for aggregated insights
+  - _Requirements: User feedback for learning_
+
+- [ ] 58. Implement Adaptive Learning Pipeline
+  - Extract patterns from negative feedback
+  - Identify incorrect cached responses
+  - Update knowledge graph with corrected relationships
+  - Retrain BM25 weights based on feedback
+  - Adjust reranking weights dynamically
+  - _Requirements: Model learns from mistakes_
+
+- [ ] 59. Implement Conversation-to-Knowledge Extraction
+  - Extract entities from chat conversations
+  - Identify new problem-solution patterns
+  - Create KB article suggestions from frequent questions
+  - Update vector embeddings with conversation insights
+  - _Requirements: Unstructured data to structured knowledge_
+
+- [ ] 60. Add Clickable Links to AI Responses
+  - Parse ticket numbers (T-YYYY-NNN) in AI responses
+  - Convert to clickable links: <a href="/ticket_detail.php?id=X">T-2024-015</a>
+  - Parse KB article references (KB-NNN)
+  - Convert to clickable links: <a href="/kb_article.php?id=X">KB-45</a>
+  - Add "View Source" buttons to each source in response
+  - _Requirements: Easy navigation from AI responses_
+
+- [ ] 61. Implement Persistent Chat Widget
+  - Store chat state in localStorage (not sessionStorage)
+  - Preserve chat history across page navigation
+  - Restore conversation when returning to page
+  - Add "Clear History" button
+  - Sync chat state across browser tabs
+  - _Requirements: Chat persists across navigation_
+
+- [ ] 62. Implement Smart Caching with Validation
+  - Add cache_validation table (cache_key, query, response, feedback_score, last_validated)
+  - Track feedback on cached responses
+  - Invalidate cache entries with negative feedback
+  - Re-query and update cache when invalidated
+  - Add "Was this helpful?" prompt for cached responses
+  - _Requirements: Cache learns from feedback_
+
+- [ ] 63. Create Learning Dashboard for Admins
+  - Show conversation analytics (total chats, avg satisfaction, common topics)
+  - Display feedback trends (positive/negative over time)
+  - Show cache hit rate and validation scores
+  - List frequently asked questions without good answers
+  - Suggest KB articles to create based on gaps
+  - _Requirements: Admin visibility into learning_
+
+- [ ] 64. Implement Continuous Learning Scheduler
+  - Daily job: Analyze feedback and update weights
+  - Weekly job: Extract new entities from conversations
+  - Monthly job: Generate KB article suggestions
+  - Quarterly job: Full model retraining with new data
+  - _Requirements: Automated learning pipeline_
+
+- [ ]* 65. Add A/B Testing for Learning
+  - Test different reranking weights
+  - Compare cached vs fresh responses
+  - Measure impact of feedback-based adjustments
+  - Track which learning strategies work best
+  - _Requirements: Validate learning effectiveness_

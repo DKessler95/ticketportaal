@@ -45,6 +45,9 @@ $userName = $_SESSION['full_name'] ?? 'Gebruiker';
                 </div>
             </div>
             <div class="ai-chat-actions">
+                <button class="ai-chat-action-btn" id="ai-chat-clear" title="Wis geschiedenis" onclick="if(confirm('Chat geschiedenis wissen?')) clearChatHistory();">
+                    <i class="bi bi-trash"></i>
+                </button>
                 <button class="ai-chat-action-btn" id="ai-chat-minimize" title="Minimaliseer">
                     <i class="bi bi-dash-lg"></i>
                 </button>
@@ -113,10 +116,11 @@ $userName = $_SESSION['full_name'] ?? 'Gebruiker';
     cursor: pointer !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     transition: all 0.3s ease !important;
-    z-index: 99999 !important;
+    z-index: 999999 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    pointer-events: auto !important;
 }
 
 .ai-chat-button:hover {
@@ -152,8 +156,9 @@ $userName = $_SESSION['full_name'] ?? 'Gebruiker';
     box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     display: flex;
     flex-direction: column;
-    z-index: 9999;
+    z-index: 999998;
     animation: slideUp 0.3s ease;
+    pointer-events: auto !important;
 }
 
 @keyframes slideUp {
@@ -370,11 +375,14 @@ console.log('AI Chat Widget loaded!');
     let isOpen = false;
     let isMinimized = false;
     
-    // Load chat state from sessionStorage
-    const savedState = sessionStorage.getItem('aiChatState');
+    // Load chat state from localStorage (persists across pages)
+    const savedState = localStorage.getItem('aiChatState');
     if (savedState === 'open') {
         openChat();
     }
+    
+    // Load chat history from localStorage
+    loadChatHistory();
     
     // Toggle chat
     chatToggle.addEventListener('click', () => {
@@ -402,7 +410,7 @@ console.log('AI Chat Widget loaded!');
     function openChat() {
         chatWindow.style.display = 'flex';
         isOpen = true;
-        sessionStorage.setItem('aiChatState', 'open');
+        localStorage.setItem('aiChatState', 'open');
         chatInput.focus();
     }
     
@@ -411,7 +419,50 @@ console.log('AI Chat Widget loaded!');
         isOpen = false;
         isMinimized = false;
         chatWindow.classList.remove('minimized');
-        sessionStorage.setItem('aiChatState', 'closed');
+        localStorage.setItem('aiChatState', 'closed');
+    }
+    
+    function saveChatHistory() {
+        const messages = [];
+        chatMessages.querySelectorAll('.ai-message-wrapper').forEach(wrapper => {
+            const isUser = wrapper.querySelector('.ai-message-user') !== null;
+            const content = wrapper.querySelector('.ai-message-content p');
+            if (content) {
+                messages.push({
+                    role: isUser ? 'user' : 'assistant',
+                    content: content.textContent
+                });
+            }
+        });
+        localStorage.setItem('aiChatHistory', JSON.stringify(messages));
+    }
+    
+    function loadChatHistory() {
+        const history = localStorage.getItem('aiChatHistory');
+        if (history) {
+            try {
+                const messages = JSON.parse(history);
+                // Clear welcome message if we have history
+                if (messages.length > 0) {
+                    chatMessages.innerHTML = '';
+                }
+                messages.forEach(msg => {
+                    if (msg.role === 'user') {
+                        addUserMessage(msg.content, false); // false = don't save again
+                    } else {
+                        addBotMessageSimple(msg.content);
+                    }
+                });
+            } catch (e) {
+                console.error('Error loading chat history:', e);
+            }
+        }
+    }
+    
+    function clearChatHistory() {
+        localStorage.removeItem('aiChatHistory');
+        localStorage.removeItem('aiChatState');
+        location.reload();
     }
     
     // Handle form submission
@@ -467,7 +518,7 @@ console.log('AI Chat Widget loaded!');
         }
     });
     
-    function addUserMessage(message) {
+    function addUserMessage(message, save = true) {
         const html = `
             <div class="ai-message-wrapper">
                 <div class="ai-message ai-message-user">
@@ -476,6 +527,25 @@ console.log('AI Chat Widget loaded!');
                     </div>
                     <div class="ai-message-avatar">
                         <i class="bi bi-person-fill"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatMessages.insertAdjacentHTML('beforeend', html);
+        scrollToBottom();
+        if (save) saveChatHistory();
+    }
+    
+    function addBotMessageSimple(text) {
+        const html = `
+            <div class="ai-message-wrapper">
+                <div class="ai-message ai-message-bot">
+                    <div class="ai-message-avatar">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="ai-message-content">
+                        <strong>AI Assistent</strong>
+                        <p>${formatResponse(text)}</p>
                     </div>
                 </div>
             </div>
@@ -506,6 +576,7 @@ console.log('AI Chat Widget loaded!');
         `;
         chatMessages.insertAdjacentHTML('beforeend', html);
         scrollToBottom();
+        saveChatHistory();
     }
     
     function addTypingIndicator() {
@@ -565,6 +636,13 @@ console.log('AI Chat Widget loaded!');
     function formatResponse(text) {
         text = text.replace(/\n/g, '<br>');
         text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert ticket numbers to clickable links
+        text = text.replace(/T-(\d{4})-(\d{3})/g, '<a href="<?php echo SITE_URL; ?>/agent/ticket_detail.php?number=T-$1-$2" target="_blank" style="color: #667eea; text-decoration: underline;">T-$1-$2</a>');
+        
+        // Convert KB article references to clickable links
+        text = text.replace(/KB-(\d+)/g, '<a href="<?php echo SITE_URL; ?>/knowledge_base.php?id=$1" target="_blank" style="color: #667eea; text-decoration: underline;">KB-$1</a>');
+        
         return text;
     }
 })();
