@@ -263,7 +263,6 @@ $pageTitle = 'Admin Dashboard';
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- AI Chat Widget -->
-<?php include __DIR__ . '/../includes/ai_chat_widget.php'; ?>
+<!-- AI Chat Widget is included in sidebar.php -->
 </body>
 </html>

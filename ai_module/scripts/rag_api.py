@@ -138,7 +138,7 @@ CONFIG = {
     # Ollama Configuration
     'ollama_url': 'http://localhost:11434',
     'ollama_model': 'llama3.1:8b',
-    'ollama_timeout': 120,  # Increased to 120 seconds for complex queries
+    'ollama_timeout': 300,  # Increased to 300 seconds (5 min) for slow systems
     'max_context_length': 4000,
     'default_top_k': 10
 }
@@ -687,7 +687,7 @@ def generate_rag_prompt(query: str, context: str,
     Returns:
         Formatted prompt string
     """
-    prompt = f"""Je bent een AI-assistent voor het K&K Ticketportaal. Je helpt medewerkers met het oplossen van IT-problemen door relevante informatie uit eerdere tickets en kennisbank artikelen te gebruiken.
+    prompt = f"""Je bent een vriendelijke AI-assistent voor het K&K Ticketportaal. Je helpt medewerkers met IT-problemen door een conversatie te voeren, niet door lange antwoorden te geven.
 
 VRAAG VAN GEBRUIKER:
 {query}
@@ -707,16 +707,34 @@ RELATIES IN KENNISBANK:
     
     prompt += """
 
-INSTRUCTIES:
-1. Beantwoord de vraag op basis van de gegeven informatie
-2. Verwijs naar specifieke bronnen (bijv. "Volgens Ticket T-2024-001...")
-3. Als je onzeker bent, geef dit duidelijk aan
-4. Als de informatie niet voldoende is, zeg dit eerlijk
-5. Geef praktische, uitvoerbare adviezen
-6. Gebruik Nederlandse taal
-7. Wees beknopt maar compleet
+BELANGRIJKE INSTRUCTIES - LEES DIT GOED:
+1. **WEES KORT EN CONVERSATIONEEL** - Maximaal 2-3 zinnen per antwoord
+2. **GEEN AANNAMES MAKEN** - Als de vraag vaag is, RAAD NIET wat het probleem is. Vraag gewoon door.
+3. **VRAAG DOOR BIJ ONDUIDELIJKHEID** - Bij vage vragen zoals "Ik heb een probleem", vraag dan:
+   - "Wat voor probleem heb je precies? Gaat het om inloggen, een applicatie, hardware, of iets anders?"
+   - "Kun je me meer vertellen over het probleem dat je ervaart?"
+4. **GEEF GEEN LANGE LIJSTEN** - Geef 1-2 concrete stappen, niet een hele handleiding
+5. **VERWIJS ALLEEN NAAR BRONNEN ALS RELEVANT** - Gebruik ticket nummers (T-2024-001) alleen als ze echt relevant zijn
+6. **WEES EERLIJK** - Als je het niet weet, zeg dat en vraag om meer details
+7. **GEBRUIK NEDERLANDSE TAAL** - Informeel en vriendelijk
 
-ANTWOORD:
+VOORBEELDEN VAN GOEDE ANTWOORDEN:
+Vraag: "Ik heb een probleem"
+Antwoord: "Ik help je graag! Wat voor probleem heb je precies? Gaat het om inloggen, een applicatie, je laptop, of iets anders?"
+
+Vraag: "Ik kan niet inloggen"
+Antwoord: "Waar kun je niet inloggen? Op je Windows laptop, in Office 365, of op een andere applicatie?"
+
+Vraag: "Office werkt niet"
+Antwoord: "Welke Office applicatie geeft problemen? Word, Excel, Outlook, of een andere?"
+
+VOORBEELDEN VAN SLECHTE ANTWOORDEN (NIET DOEN):
+- "Sorry om je internetprobleem" (als de gebruiker internet niet noemde)
+- Lange lijsten met 10+ stappen
+- Aannames maken over wat het probleem is
+- Meerdere oplossingen tegelijk zonder door te vragen
+
+ANTWOORD (MAX 2-3 ZINNEN, GEEN AANNAMES):
 """
     
     return prompt
@@ -872,13 +890,13 @@ def check_system_resources() -> bool:
     try:
         # Check CPU usage
         cpu_percent = psutil.cpu_percent(interval=0.1)
-        if cpu_percent > 80:
+        if cpu_percent > 95:  # Increased from 80% to 95% to allow queries on busy systems
             logger.warning(f"CPU usage too high: {cpu_percent}%")
             return False
         
-        # Check RAM usage
+        # Check RAM usage (increased threshold for development)
         memory = psutil.virtual_memory()
-        if memory.percent > 80:
+        if memory.percent > 96:  # Increased from 80% to 96% to allow queries on busy systems
             logger.warning(f"Memory usage too high: {memory.percent}%")
             return False
         

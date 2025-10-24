@@ -93,7 +93,12 @@ class AIHelper {
      * @return array Response with success, ai_answer, sources, etc.
      */
     public function getSuggestions($query, $options = []) {
+        // Increase PHP execution time for AI queries (they can take a while)
+        $original_time_limit = ini_get('max_execution_time');
+        set_time_limit(360); // 6 minutes for AI queries on slow systems
+        
         if (!$this->isEnabled()) {
+            set_time_limit($original_time_limit); // Restore original
             return [
                 'success' => false,
                 'error' => 'AI service is not available',
@@ -120,6 +125,9 @@ class AIHelper {
         try {
             $response = $this->makeRequest('/rag_query', 'POST', $data);
             
+            // Restore original time limit
+            set_time_limit($original_time_limit);
+            
             if ($response && isset($response['success'])) {
                 return $response;
             }
@@ -136,6 +144,9 @@ class AIHelper {
             
         } catch (Exception $e) {
             error_log("AI getSuggestions Failed: " . $e->getMessage());
+            
+            // Restore original time limit
+            set_time_limit($original_time_limit);
             
             return [
                 'success' => false,

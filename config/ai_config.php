@@ -9,7 +9,7 @@ define('AI_ENABLED', true);
 
 // RAG API Configuration
 define('RAG_API_URL', 'http://localhost:5005');
-define('RAG_API_TIMEOUT', 30);
+define('RAG_API_TIMEOUT', 330); // Increased to 330 seconds (5.5 min) for slow systems
 
 // Beta rollout - leave empty array to enable for all users
 // Add user IDs to restrict to specific users during testing
