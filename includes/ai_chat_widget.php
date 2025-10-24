@@ -269,6 +269,47 @@ $userName = $_SESSION['full_name'] ?? 'Gebruiker';
     margin-top: 8px;
 }
 
+/* Message Footer */
+.ai-message-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* Feedback Buttons */
+.ai-feedback-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.ai-feedback-btn {
+    background: transparent;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.ai-feedback-btn:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+    transform: scale(1.1);
+}
+
+.ai-feedback-btn:disabled {
+    cursor: not-allowed;
+}
+
 /* Typing Indicator */
 .ai-typing-indicator {
     display: flex;
@@ -557,9 +598,10 @@ console.log('AI Chat Widget loaded!');
     function addBotMessage(data) {
         const confidence = (data.confidence_score * 100).toFixed(0);
         let confidenceColor = confidence >= 70 ? '#28a745' : confidence >= 50 ? '#ffc107' : '#dc3545';
+        const messageId = 'msg-' + Date.now();
         
         const html = `
-            <div class="ai-message-wrapper">
+            <div class="ai-message-wrapper" data-message-id="${messageId}">
                 <div class="ai-message ai-message-bot">
                     <div class="ai-message-avatar">
                         <i class="bi bi-robot"></i>
@@ -567,9 +609,19 @@ console.log('AI Chat Widget loaded!');
                     <div class="ai-message-content">
                         <strong>AI Assistent</strong>
                         <p>${formatResponse(data.ai_answer)}</p>
-                        <small style="color: ${confidenceColor};">
-                            <i class="bi bi-check-circle"></i> ${confidence}% vertrouwen
-                        </small>
+                        <div class="ai-message-footer">
+                            <small style="color: ${confidenceColor};">
+                                <i class="bi bi-check-circle"></i> ${confidence}% vertrouwen
+                            </small>
+                            <div class="ai-feedback-buttons" id="feedback-${messageId}">
+                                <button class="ai-feedback-btn" onclick="submitFeedback('${messageId}', 1)" title="Nuttig">
+                                    <i class="bi bi-hand-thumbs-up"></i>
+                                </button>
+                                <button class="ai-feedback-btn" onclick="submitFeedback('${messageId}', -1)" title="Niet nuttig">
+                                    <i class="bi bi-hand-thumbs-down"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -645,5 +697,47 @@ console.log('AI Chat Widget loaded!');
         
         return text;
     }
+    
+    // Make submitFeedback global
+    window.submitFeedback = async function(messageId, score) {
+        console.log('Feedback:', messageId, score);
+        
+        const feedbackDiv = document.getElementById('feedback-' + messageId);
+        if (!feedbackDiv) return;
+        
+        // Visual feedback
+        const buttons = feedbackDiv.querySelectorAll('.ai-feedback-btn');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+        });
+        
+        // Highlight selected button
+        const selectedBtn = score > 0 ? buttons[0] : buttons[1];
+        selectedBtn.style.color = score > 0 ? '#28a745' : '#dc3545';
+        selectedBtn.style.opacity = '1';
+        
+        // Send feedback to server
+        try {
+            await fetch('<?php echo SITE_URL; ?>/api/ai_feedback.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                credentials: 'same-origin',
+                body: new URLSearchParams({
+                    message_id: messageId,
+                    feedback_score: score,
+                    timestamp: new Date().toISOString()
+                })
+            });
+            
+            // Show thank you message
+            feedbackDiv.innerHTML = '<small style="color: #6c757d;"><i class="bi bi-check"></i> Bedankt voor je feedback!</small>';
+        } catch (error) {
+            console.error('Feedback error:', error);
+        }
+    };
+    
+    // Make clearChatHistory global
+    window.clearChatHistory = clearChatHistory;
 })();
 </script>
